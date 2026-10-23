@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>茶米老師的互動遊戲大廳 - 國小數位學習遊戲樂園</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Noto+Sans+TC:wght@400;600;800;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'sans-serif'],
+            arcade: ['"Orbitron"', '"Noto Sans TC"', 'sans-serif'],
+            festival: ['"Mochiy Pop One"', '"Noto Sans TC"', 'sans-serif'],
+          },
+          colors: {
+            arcade: {
+              dark: '#080c18',
+              card: '#0f172a',
+              border: '#1e293b',
+              accent: '#38bdf8',
+              gold: '#fbbf24',
+              neonPink: '#f43f5e',
+              neonGreen: '#10b981',
+            }
+          },
+          animation: {
+            'glow-pulse': 'glowPulse 3s ease-in-out infinite',
+            'float-slow': 'floatSlow 4s ease-in-out infinite',
+          },
+          keyframes: {
+            glowPulse: {
+              '0%, 100%': { filter: 'drop-shadow(0 0 15px rgba(56, 189, 248, 0.4))' },
+              '50%': { filter: 'drop-shadow(0 0 25px rgba(244, 63, 94, 0.6))' },
+            },
+            floatSlow: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-6px)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background-color: #060913;
+      color: #f1f5f9;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow-x: hidden;
+    }
+
+    /* 背景星空霓虹光網 */
+    .bg-grid-pattern {
+      background-image: 
+        radial-gradient(circle at 50% 20%, rgba(56, 189, 248, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 85% 60%, rgba(244, 63, 94, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 15% 75%, rgba(251, 191, 36, 0.1) 0%, transparent 40%),
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+    }
+
+    /* 遊戲預覽卡片光暈與陰影 */
+    .game-card {
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    .game-card:hover {
+      transform: translateY(-6px);
+    }
+
+    /* 模擬畫面預覽視窗比例 */
+    .preview-aspect {
+      aspect-ratio: 16 / 9;
+    }
+
+    /* 自訂捲軸樣式 */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b0f19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-grid-pattern min-h-screen flex flex-col font-sans">
+
+  <!-- ==================== 頂部全域導覽列 ==================== -->
+  <header class="w-full bg-slate-900/85 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-40 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex justify-between items-center">
+      
+      <!-- 左側 Logo 與名稱 -->
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-500 to-rose-500 p-0.5 shadow-lg shadow-sky-500/20 animate-glow-pulse flex items-center justify-center">
+          <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-2xl">
+            🎮
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg sm:text-xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-300 to-amber-300">
+              茶米老師的互動遊戲大廳
+            </h1>
+            <span class="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 font-bold uppercase tracking-wider">
+              Web Arcade
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 tracking-wider">國小跨領域數位學習・趣味互動挑戰館</p>
+        </div>
+      </div>
+
+      <!-- 右側動作按鈕 -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- 好手氣隨機抽遊戲 -->
+        <button id="btnRandomPick" 
+                onclick="randomPickGame()" 
+                class="px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 active:scale-95 text-slate-950 font-black text-xs sm:text-sm shadow-md shadow-amber-500/20 transition-all flex items-center gap-1.5"
+                title="隨機抽出一款遊戲進行挑戰！">
+          <span>🎲</span>
+          <span class="hidden sm:inline">好手氣</span>
+          <span>隨機玩</span>
+        </button>
+
+        <!-- 音效開關按鈕 -->
+        <button id="btnSoundToggle" 
+                onclick="toggleSound()" 
+                class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700 flex items-center justify-center text-sm shadow-sm transition-all"
+                title="大廳音效開關">
+          🔊
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ==================== 主視覺 HERO 橫幅 ==================== -->
+  <section class="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-8 pb-4">
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900/90 via-slate-900/60 to-slate-950/90 border border-slate-800 p-6 sm:p-10 shadow-2xl">
+      
+      <!-- 背景光暈裝飾 -->
+      <div class="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-sky-500/10 blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-rose-500/10 blur-3xl pointer-events-none"></div>
+      
+      <div class="relative z-10 max-w-3xl">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-xs text-sky-300 font-bold mb-3">
+          <span>✨</span>
+          <span>即開即玩・免下載安裝・三端響應式跨平台</span>
+        </div>
+
+        <h2 class="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight mb-3">
+          點亮學習樂趣，啟動你的
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-rose-400 to-sky-400">
+            超能大腦冒險！
+          </span>
+        </h2>
+
+        <p class="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
+          歡迎來到互動遊戲大廳！這裡匯集了國小語文成語、雙手節奏律動與太空英打防衛等多款趣味互動遊戲。點擊下方遊戲即可直接啟動挑戰，各遊戲內皆具備隨時「返回首頁」的貼心導航設計！
+        </p>
+
+        <!-- 遊戲分類篩選與統計徽章 -->
+        <div class="flex flex-wrap items-center gap-2 pt-1" id="filterButtons">
+          <button onclick="filterGames('all')" data-filter="all" class="filter-btn active px-3.5 py-1.5 rounded-full text-xs font-bold bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20 transition-all">
+            全部遊戲 (3)
+          </button>
+          <button onclick="filterGames('chinese')" data-filter="chinese" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700 transition-all">
+            📜 國語文益智
+          </button>
+          <button onclick="filterGames('rhythm')" data-filter="rhythm" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700 transition-all">
+            🥁 音樂節奏
+          </button>
+          <button onclick="filterGames('english')" data-filter="english" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700 transition-all">
+            🚀 英語打字
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== 遊戲卡片展示專區 ==================== -->
+  <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex-1">
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8" id="gamesGrid">
+
+      <!-- ==================== 卡片 1：成語填填看 ==================== -->
+      <article class="game-card flex flex-col bg-slate-900/90 rounded-3xl border-2 border-amber-500/30 overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-amber-500/10 hover:border-amber-400 transition-all group"
+               data-category="chinese">
+        
+        <!-- 卡片頂部畫面預覽區域 (高精度互動擬真畫面) -->
+        <div class="relative preview-aspect bg-gradient-to-b from-slate-950 to-slate-900 border-b border-slate-800 overflow-hidden flex flex-col justify-between p-3.5 cursor-pointer"
+             onclick="openPreviewModal('game1', '成語填填看')">
+          
+          <!-- 頂部視窗狀態列 (模擬遊戲 HUD) -->
+          <div class="flex justify-between items-center z-10">
+            <span class="px-2.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold flex items-center gap-1">
+              <span>📜</span> 成語填填看・第 3/10 題
+            </span>
+            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold">
+              得分: 20 分
+            </span>
+          </div>
+
+          <!-- 中央遊戲畫面預覽 (擬真成語挖空排版) -->
+          <div class="my-auto flex flex-col items-center justify-center gap-2 z-10 py-1">
+            <!-- 模擬成語卡 -->
+            <div class="flex items-center gap-2">
+              <div class="w-10 h-10 rounded-xl bg-slate-800 border-2 border-amber-500/40 flex items-center justify-center text-lg font-black text-amber-200">守</div>
+              <div class="w-10 h-10 rounded-xl bg-slate-800 border-2 border-amber-500/40 flex items-center justify-center text-lg font-black text-amber-200">株</div>
+              <div class="w-10 h-10 rounded-xl bg-amber-500/20 border-2 border-dashed border-amber-400 flex items-center justify-center text-lg font-black text-amber-400 animate-pulse">？</div>
+              <div class="w-10 h-10 rounded-xl bg-slate-800 border-2 border-amber-500/40 flex items-center justify-center text-lg font-black text-amber-200">兔</div>
+            </div>
+            <!-- 模擬候選按鈕群 -->
+            <div class="flex gap-1.5 pt-1">
+              <span class="px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700 text-xs text-slate-300 font-bold">A. 呆</span>
+              <span class="px-2.5 py-1 rounded-lg bg-amber-500/25 border border-amber-400 text-xs text-amber-300 font-bold shadow-[0_0_8px_rgba(251,191,36,0.3)]">B. 待</span>
+              <span class="px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700 text-xs text-slate-300 font-bold">C. 帶</span>
+              <span class="px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700 text-xs text-slate-300 font-bold">D. 代</span>
+            </div>
+          </div>
+
+          <!-- 底部微縮進度條 -->
+          <div class="w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden z-10">
+            <div class="bg-gradient-to-r from-amber-500 to-emerald-400 h-full rounded-full" style="width: 45%;"></div>
+          </div>
+
+          <!-- 浮動預覽標籤 (Hover 提示) -->
+          <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20 gap-2">
+            <span class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-black text-xs shadow-lg flex items-center gap-1.5">
+              <span>👁️</span> 點擊快速預覽試玩
+            </span>
+          </div>
+
+          <!-- 右上角角標 -->
+          <div class="absolute top-0 right-0 bg-amber-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-bl-xl shadow-md z-10">
+            國小語文
+          </div>
+        </div>
+
+        <!-- 卡片內容介紹 -->
+        <div class="p-5 flex-1 flex flex-col justify-between">
+          <div>
+            <!-- 標題與標籤 -->
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div>
+                <h3 class="text-xl font-black text-amber-300 flex items-center gap-2">
+                  <span>成語填填看</span>
+                  <span class="text-xs px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">益智</span>
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">四字成語・益智挖空填答挑戰賽</p>
+              </div>
+              <span class="text-xs text-amber-400 font-mono font-bold shrink-0">⭐⭐☆</span>
+            </div>
+
+            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+              考驗國語文成語造詣！隨機抽取 10 題精選四字成語，缺字挖空填答，具備 15 秒雙血條（倒數計時與進度）機制與即時正確釋義，加深成語詞彙理解！
+            </p>
+
+            <!-- 核心特色標籤 -->
+            <div class="space-y-1.5 mb-5 text-[11px] text-slate-300">
+              <div class="flex items-center gap-2">
+                <span class="w-4 h-4 rounded bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-[10px]">✔</span>
+                <span>隨機 10 題成語題庫與完整釋義反饋</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-4 h-4 rounded bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-[10px]">✔</span>
+                <span>雙血條緊張挑戰與 Web Audio 合成音效</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-4 h-4 rounded bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-[10px]">✔</span>
+                <span>手機、平板觸控與電腦滑鼠完美適配</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 動作按鈕群 -->
+          <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-800">
+            <button onclick="openPreviewModal('game1', '成語填填看')" 
+                    class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-bold text-slate-200 border border-slate-700 flex items-center justify-center gap-1.5 transition-all">
+              <span>👁️</span> 視窗預覽
+            </button>
+            <a href="./game1/index.html" 
+               class="py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-xs font-black text-slate-950 flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 transition-all">
+              <span>🚀 進入遊戲</span>
+            </a>
+          </div>
+
+        </div>
+      </article>
+
+      <!-- ==================== 卡片 2：太鼓咚咚鏘 ==================== -->
+      <article class="game-card flex flex-col bg-slate-900/90 rounded-3xl border-2 border-red-500/30 overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-red-500/10 hover:border-red-400 transition-all group"
+               data-category="rhythm">
+        
+        <!-- 卡片頂部畫面預覽區域 (太鼓祭典擬真預覽) -->
+        <div class="relative preview-aspect bg-gradient-to-b from-[#2b0308] to-[#150104] border-b border-slate-800 overflow-hidden flex flex-col justify-between p-3.5 cursor-pointer"
+             onclick="openPreviewModal('game2', '太鼓咚咚鏘：節奏大師特訓班')">
+          
+          <!-- 頂部視窗狀態列 (日式祭典太鼓 HUD) -->
+          <div class="flex justify-between items-center z-10">
+            <span class="px-2.5 py-0.5 rounded-md bg-red-600/30 text-amber-300 border border-amber-500/40 text-[10px] font-bold font-festival flex items-center gap-1">
+              <span>🏮</span> 夏祭花火・迎神音頭
+            </span>
+            <span class="px-2 py-0.5 rounded bg-black/50 text-amber-300 font-mono text-[10px] font-bold border border-amber-500/30">
+              得點: 0012500
+            </span>
+          </div>
+
+          <!-- 中央音軌預覽 (太鼓打擊音軌與移動音符) -->
+          <div class="my-auto w-full relative h-14 bg-black/60 rounded-xl border border-amber-500/30 flex items-center px-3 overflow-hidden z-10">
+            <!-- 判定框 -->
+            <div class="w-10 h-10 rounded-full border-2 border-amber-300 bg-amber-400/20 flex items-center justify-center text-[10px] font-black text-amber-200 shadow-[0_0_10px_#ffd152] shrink-0 z-10">
+              良
+            </div>
+            <!-- 音軌上的飄動太鼓音符 -->
+            <div class="flex-1 relative h-full flex items-center justify-around pl-4">
+              <span class="w-8 h-8 rounded-full bg-red-600 text-white font-black text-xs font-festival flex items-center justify-center border border-white shadow-[0_0_8px_#e60026] animate-pulse">咚</span>
+              <span class="w-8 h-8 rounded-full bg-sky-500 text-white font-black text-xs font-festival flex items-center justify-center border border-white shadow-[0_0_8px_#00a8ff]">鏘</span>
+              <span class="w-8 h-8 rounded-full bg-red-600 text-white font-black text-xs font-festival flex items-center justify-center border border-white shadow-[0_0_8px_#e60026]">咚</span>
+              <span class="w-8 h-8 rounded-full bg-red-600 text-white font-black text-xs font-festival flex items-center justify-center border border-white shadow-[0_0_8px_#e60026]">咚</span>
+            </div>
+          </div>
+
+          <!-- 底部左右分區提示與魂量表 -->
+          <div class="flex justify-between items-center text-[10px] text-amber-200/80 font-bold z-10">
+            <span>🔴 螢幕左半邊 (咚)</span>
+            <span class="text-amber-400 font-festival">28 Combo! 🔥</span>
+            <span>🔵 螢幕右半邊 (鏘)</span>
+          </div>
+
+          <!-- 浮動預覽標籤 (Hover 提示) -->
+          <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20 gap-2">
+            <span class="px-4 py-2 rounded-xl bg-red-600 text-white font-black text-xs shadow-lg flex items-center gap-1.5">
+              <span>👁️</span> 點擊快速預覽試玩
+            </span>
+          </div>
+
+          <!-- 右上角角標 -->
+          <div class="absolute top-0 right-0 bg-red-600 text-white font-black text-[10px] px-2.5 py-0.5 rounded-bl-xl shadow-md z-10 font-festival">
+            祭典太鼓
+          </div>
+        </div>
+
+        <!-- 卡片內容介紹 -->
+        <div class="p-5 flex-1 flex flex-col justify-between">
+          <div>
+            <!-- 標題與標籤 -->
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div>
+                <h3 class="text-xl font-black text-amber-300 font-festival flex items-center gap-2">
+                  <span>太鼓咚咚鏘</span>
+                  <span class="text-xs px-2 py-0.5 rounded-md bg-red-600/20 text-red-300 border border-red-500/40">節奏</span>
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">熱血太鼓・節奏大師特訓班</p>
+              </div>
+              <span class="text-xs text-amber-400 font-mono font-bold shrink-0">⭐⭐⭐</span>
+            </div>
+
+            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+              熱血沸騰的日式祭典太鼓演奏！左右全螢幕隱形觸控（大拇指超好敲）或電腦按鍵對決，敲擊「咚」與「鏘」，隨著連打漸進加速，享受手腦協調快感！
+            </p>
+
+            <!-- 核心特色標籤 -->
+            <div class="space-y-1.5 mb-5 text-[11px] text-slate-300">
+              <div class="flex items-center gap-2">
+                <span class="w-4 h-4 rounded bg-red-500/20 text-red-400 flex items-center justify-center font-bold text-[10px]">✔</span>
+                <span>3 首原創祭典曲目 (夏祭花火 / 千本櫻 / 雷神祭)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-4 h-4 rounded bg-red-500/20 text-red-400 flex items-center justify-center font-bold text-[10px]">✔</span>
+                <span>自適應動態速度調節 (連打加速、失誤溫和回落)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-4 h-4 rounded bg-red-500/20 text-red-400 flex items-center justify-center font-bold text-[10px]">✔</span>
+                <span>手機左右大觸控零虛擬鍵防誤觸設計</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 動作按鈕群 -->
+          <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-800">
+            <button onclick="openPreviewModal('game2', '太鼓咚咚鏘：節奏大師特訓班')" 
+                    class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-bold text-slate-200 border border-slate-700 flex items-center justify-center gap-1.5 transition-all">
+              <span>👁️</span> 視窗預覽
+            </button>
+            <a href="./game2/index.html" 
+               class="py-2.5 px-3 rounded-xl bg-gradient-to-r from-red-600 via-amber-500 to-red-600 hover:brightness-110 active:scale-95 text-xs font-black text-slate-950 flex items-center justify-center gap-1.5 shadow-md shadow-red-600/30 transition-all font-festival">
+              <span>🥁 進入遊戲</span>
+            </a>
+          </div>
+
+        </div>
+      </article>
+
+      <!-- ==================== 卡片 3：太空英打防衛戰 ==================== -->
+      <article class="game-card flex flex-col bg-slate-900/90 rounded-3xl border-2 border-cyan-500/30 overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-cyan-500/10 hover:border-cyan-400 transition-all group"
+               data-category="english">
+        
+        <!-- 卡片頂部畫面預覽區域 (科幻太空英打擬真預覽) -->
+        <div class="relative preview-aspect bg-gradient-to-b from-[#0b1022] to-[#04060d] border-b border-slate-800 overflow-hidden flex flex-col justify-between p-3.5 cursor-pointer"
+             onclick="openPreviewModal('game3', '太空英打防衛戰')">
+          
+          <!-- 頂部視窗狀態列 (科幻太空 HUD) -->
+          <div class="flex justify-between items-center z-10">
+            <span class="px-2.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold font-arcade flex items-center gap-1">
+              <span>🚀</span> 完成數: 18 / 26
+            </span>
+            <span class="px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 font-mono text-[10px] font-bold">
+              剩餘: 8 機
+            </span>
+          </div>
+
+          <!-- 中央遊戲畫面預覽 (墜落字母敵機與離子雷射) -->
+          <div class="my-auto w-full relative h-16 flex items-center justify-around z-10">
+            <!-- 字母敵機 A (降落中) -->
+            <div class="flex flex-col items-center animate-bounce">
+              <span class="w-7 h-7 rounded-lg bg-pink-600/90 text-white font-black font-arcade text-xs flex items-center justify-center border border-pink-300 shadow-[0_0_10px_#f43f5e]">A</span>
+              <span class="text-[9px] text-pink-300">▼</span>
+            </div>
+            <!-- 字母敵機 K (遭雷射鎖定) -->
+            <div class="flex flex-col items-center">
+              <span class="w-7 h-7 rounded-lg bg-yellow-500/90 text-slate-950 font-black font-arcade text-xs flex items-center justify-center border border-yellow-200 shadow-[0_0_10px_#fbbf24]">K</span>
+              <span class="h-6 w-0.5 bg-cyan-400 shadow-[0_0_8px_#00f3ff]"></span>
+            </div>
+            <!-- 字母敵機 Z -->
+            <div class="flex flex-col items-center">
+              <span class="w-7 h-7 rounded-lg bg-indigo-600/90 text-white font-black font-arcade text-xs flex items-center justify-center border border-indigo-300">Z</span>
+              <span class="text-[9px] text-indigo-300">▼</span>
+            </div>
+          </div>
+
+          <!-- 底部防衛離子護盾線與防衛戰艦 -->
+          <div class="w-full flex flex-col items-center z-10">
+            <div class="w-full h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_8px_#00f3ff]"></div>
+            <div class="text-[10px] text-cyan-300 font-mono tracking-wider pt-0.5">
+              🛡️ 戰艦離子防衛網・準確率 98%
+            </div>
+          </div>
+
+          <!-- 浮動預覽標籤 (Hover 提示) -->
+          <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20 gap-2">
+            <span class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-black text-xs shadow-lg flex items-center gap-1.5">
+              <span>👁️</span> 點擊快速預覽試玩
+            </span>
+          </div>
+
+          <!-- 右上角角標 -->
+          <div class="absolute top-0 right-0 bg-cyan-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-bl-xl shadow-md z-10 font-arcade">
+            英語敏捷
+          </div>
+        </div>
+
+        <!-- 卡片內容介紹 -->
+        <div class="p-5 flex-1 flex flex-col justify-between">
+          <div>
+            <!-- 標題與標籤 -->
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div>
+                <h3 class="text-xl font-black text-cyan-300 font-arcade flex items-center gap-2">
+                  <span>太空英打防衛戰</span>
+                  <span class="text-xs px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">打字</span>
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">捍衛母艦防線・擊落 26 顆英文字母敵機</p>
+              </div>
+              <span class="text-xs text-amber-400 font-mono font-bold shrink-0">⭐⭐⭐</span>
+            </div>
+
+            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+              操控太空母艦發射離子雷射擊退 26 顆字母敵機！具備 26 字母全域雷達矩陣、3 種強度挑戰，即時統計 CPM 打字速度與命中率，英打實力突飛猛進！
+            </p>
+
+            <!-- 核心特色標籤 -->
+            <div class="space-y-1.5 mb-5 text-[11px] text-slate-300">
+              <div class="flex items-center gap-2">
+                <span class="w-4 h-4 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-[10px]">✔</span>
+                <span>26 個字母完整降落雷達與防線突破重返機制</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-4 h-4 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-[10px]">✔</span>
+                <span>巡航 / 激戰 / 極限 3 種作戰強度任選</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-4 h-4 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-[10px]">✔</span>
+                <span>電腦實體鍵盤高速輸入 + 手機觸控虛擬鍵盤支援</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 動作按鈕群 -->
+          <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-800">
+            <button onclick="openPreviewModal('game3', '太空英打防衛戰')" 
+                    class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-bold text-slate-200 border border-slate-700 flex items-center justify-center gap-1.5 transition-all">
+              <span>👁️</span> 視窗預覽
+            </button>
+            <a href="./game3/index.html" 
+               class="py-2.5 px-3 rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-indigo-600 hover:brightness-110 active:scale-95 text-xs font-black text-slate-950 flex items-center justify-center gap-1.5 shadow-md shadow-cyan-500/20 transition-all font-arcade">
+              <span>🛸 進入遊戲</span>
+            </a>
+          </div>
+
+        </div>
+      </article>
+
+    </div>
+
+  </main>
+
+  <!-- ==================== 頁尾資訊 ==================== -->
+  <footer class="w-full bg-slate-950 border-t border-slate-900 py-6 px-4 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+      <div class="flex items-center gap-2">
+        <span class="text-base">🎓</span>
+        <span class="font-bold text-slate-400">茶米老師互動遊戲樂園</span>
+        <span>• 專為國小課堂與自主學習設計</span>
+      </div>
+      <div class="flex items-center gap-4 text-slate-400">
+        <span>純前端離線技術 (HTML5 / Web Audio / Tailwind)</span>
+        <span>•</span>
+        <span class="text-amber-400">免安裝隨開隨玩</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==================== 快速試玩 / 畫面預覽彈跳視窗 (Lightbox Modal) ==================== -->
+  <div id="previewModal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 transition-all duration-200">
+    
+    <div class="relative w-full max-w-5xl h-[92vh] bg-slate-950 border-2 border-slate-700 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+      
+      <!-- 視窗標題列 -->
+      <div class="px-4 py-3 bg-slate-900 border-b border-slate-800 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+          <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+          <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+          <span id="previewModalTitle" class="ml-2 font-black text-sm text-slate-200">
+            遊戲預覽
+          </span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold hidden sm:inline">
+            即時試玩模式
+          </span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- 前往全螢幕獨立遊戲按鈕 -->
+          <a id="previewDirectLink" href="#" 
+             class="px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs transition-all flex items-center gap-1 shadow-sm">
+            <span>🚀</span>
+            <span>獨立全螢幕遊玩</span>
+          </a>
+
+          <!-- 關閉預覽按鈕 -->
+          <button onclick="closePreviewModal()" 
+                  class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white flex items-center justify-center text-sm font-bold border border-slate-700 transition-all">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- 預覽 iframe 容器 -->
+      <div class="flex-1 bg-black relative w-full h-full">
+        <iframe id="previewIframe" src="" class="w-full h-full border-0" allow="autoplay"></iframe>
+      </div>
+
+      <!-- 預覽視窗底部提示 -->
+      <div class="px-4 py-2 bg-slate-900/90 border-t border-slate-800 flex justify-between items-center text-[11px] text-slate-400 shrink-0">
+        <span>💡 提示：您可以在此直接點擊試玩，或點擊「獨立全螢幕遊玩」獲得最佳遊戲體驗。</span>
+        <button onclick="closePreviewModal()" class="text-sky-400 hover:underline">關閉預覽</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== JavaScript 大廳控制邏輯 ==================== -->
+  <script>
+    // 遊戲資訊表
+    const GAMES = [
+      { id: 'game1', name: '成語填填看', category: 'chinese', url: './game1/index.html' },
+      { id: 'game2', name: '太鼓咚咚鏘：節奏大師特訓班', category: 'rhythm', url: './game2/index.html' },
+      { id: 'game3', name: '太空英打防衛戰', category: 'english', url: './game3/index.html' }
+    ];
+
+    // ==================== 1. Web Audio 大廳微音效 ====================
+    let audioCtx = null;
+    let isSoundMuted = localStorage.getItem('lobby_muted') === 'true';
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playBeep(freq = 440, type = 'sine', duration = 0.1, gainVal = 0.08) {
+      if (isSoundMuted) return;
+      try {
+        initAudio();
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      isSoundMuted = !isSoundMuted;
+      localStorage.setItem('lobby_muted', isSoundMuted);
+      updateSoundButton();
+      if (!isSoundMuted) {
+        playBeep(523.25, 'triangle', 0.15, 0.1);
+      }
+    }
+
+    function updateSoundButton() {
+      const btn = document.getElementById('btnSoundToggle');
+      if (btn) {
+        btn.textContent = isSoundMuted ? '🔇' : '🔊';
+        btn.title = isSoundMuted ? '開啟大廳音效' : '關閉大廳音效';
+      }
+    }
+
+    // ==================== 2. 分類篩選邏輯 ====================
+    function filterGames(category) {
+      playBeep(659.25, 'sine', 0.1);
+      const cards = document.querySelectorAll('#gamesGrid .game-card');
+      const buttons = document.querySelectorAll('#filterButtons .filter-btn');
+
+      // 更新按鈕樣式
+      buttons.forEach(btn => {
+        if (btn.getAttribute('data-filter') === category) {
+          btn.className = 'filter-btn active px-3.5 py-1.5 rounded-full text-xs font-bold bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20 transition-all';
+        } else {
+          btn.className = 'filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700 transition-all';
+        }
+      });
+
+      // 篩選卡片顯隱
+      cards.forEach(card => {
+        const cardCat = card.getAttribute('data-category');
+        if (category === 'all' || cardCat === category) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // ==================== 3. 隨機抽取遊戲 ====================
+    function randomPickGame() {
+      playBeep(880, 'triangle', 0.15, 0.15);
+      const cards = Array.from(document.querySelectorAll('#gamesGrid .game-card'));
+      
+      // 確保所有卡片都可見
+      filterGames('all');
+
+      let counter = 0;
+      const totalSteps = 12;
+      const interval = setInterval(() => {
+        cards.forEach(c => c.classList.remove('ring-4', 'ring-amber-400', 'scale-105'));
+        const randomCard = cards[counter % cards.length];
+        randomCard.classList.add('ring-4', 'ring-amber-400', 'scale-105');
+        playBeep(440 + (counter % 3) * 150, 'sine', 0.05, 0.05);
+
+        counter++;
+        if (counter >= totalSteps) {
+          clearInterval(interval);
+          // 最終停在一款隨機選出的遊戲
+          const finalIndex = Math.floor(Math.random() * cards.length);
+          cards.forEach(c => c.classList.remove('ring-4', 'ring-amber-400', 'scale-105'));
+          const chosenCard = cards[finalIndex];
+          chosenCard.classList.add('ring-4', 'ring-amber-400', 'scale-105');
+          chosenCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+          // 勝利提示音
+          setTimeout(() => {
+            playBeep(1046.5, 'triangle', 0.3, 0.15);
+          }, 150);
+
+          // 3 秒後移除高亮環
+          setTimeout(() => {
+            chosenCard.classList.remove('ring-4', 'ring-amber-400', 'scale-105');
+          }, 3500);
+        }
+      }, 100);
+    }
+
+    // ==================== 4. 快速試玩 / 視窗預覽 Modal ====================
+    const previewModal = document.getElementById('previewModal');
+    const previewIframe = document.getElementById('previewIframe');
+    const previewModalTitle = document.getElementById('previewModalTitle');
+    const previewDirectLink = document.getElementById('previewDirectLink');
+
+    function openPreviewModal(gameId, gameTitle) {
+      playBeep(587.33, 'sine', 0.12);
+      const targetUrl = `./${gameId}/index.html`;
+      previewModalTitle.textContent = `${gameTitle} - 即時試玩預覽`;
+      previewDirectLink.href = targetUrl;
+      previewIframe.src = targetUrl;
+      previewModal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closePreviewModal() {
+      playBeep(392, 'sine', 0.1);
+      previewModal.classList.add('hidden');
+      previewIframe.src = ''; // 停止 iframe 背景音樂/音效運行
+      document.body.style.overflow = '';
+    }
+
+    // 按下 ESC 鍵關閉 Modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !previewModal.classList.contains('hidden')) {
+        closePreviewModal();
+      }
+    });
+
+    // 點擊 Modal 外部背景關閉
+    previewModal.addEventListener('click', (e) => {
+      if (e.target === previewModal) {
+        closePreviewModal();
+      }
+    });
+
+    // 初始音效按鈕狀態
+    updateSoundButton();
+  </script>
+</body>
+</html>

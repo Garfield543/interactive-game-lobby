@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>成語填填看 - 國小趣味成語挑戰賽</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              gold: '#FBBF24',
+              crimson: '#E11D48',
+              emerald: '#10B981',
+              dark: '#0F172A',
+              card: '#1E293B',
+            }
+          },
+          animation: {
+            'bounce-short': 'bounce 0.6s ease-in-out 2',
+            'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'pop-in': 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+          },
+          keyframes: {
+            popIn: {
+              '0%': { transform: 'scale(0.8)', opacity: '0' },
+              '100%': { transform: 'scale(1)', opacity: '1' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 防選取與流暢觸控 */
+    body {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    /* 彩帶動畫 */
+    @keyframes fall {
+      0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+    .confetti-piece {
+      position: absolute;
+      width: 10px;
+      height: 14px;
+      animation: fall 1.5s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between font-sans antialiased overflow-x-hidden"
+      x-data="idiomGameApp()" x-init="initGame()">
+
+  <!-- 頂部功能導覽列 -->
+  <header class="w-full bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 py-3 sticky top-0 z-30 shadow-md">
+    <div class="max-w-3xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <a href="../index.html" 
+           class="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 active:scale-95 transition-all text-xs font-bold text-amber-300 border border-amber-500/30 flex items-center gap-1.5 shadow-sm group mr-1"
+           title="返回遊戲大廳">
+          <span class="group-hover:-translate-x-0.5 transition-transform">🏠</span>
+          <span>遊戲大廳</span>
+        </a>
+        <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-xl shadow-inner shadow-amber-500/20">
+          📜
+        </div>
+        <div>
+          <h1 class="text-lg font-black tracking-wide text-amber-400">成語填填看</h1>
+          <p class="text-[10px] text-slate-400 tracking-wider">四字成語・益智填空挑戰賽</p>
+        </div>
+      </div>
+      
+      <!-- 右側控制項：靜音切換 -->
+      <button @click="toggleMute()" 
+              class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 transition-all text-xs font-bold border border-slate-700 flex items-center gap-1.5 shadow-sm">
+        <span x-text="isMuted ? '🔇 靜音' : '🔊 音效開'"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 主要互動畫面容器 -->
+  <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col justify-center items-center relative">
+
+    <!-- ==================== 1. 遊戲啟動畫面 ==================== -->
+    <template x-if="screen === 'start'">
+      <div class="w-full max-w-lg bg-slate-900 border-2 border-amber-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-amber-500/10 text-center animate-pop-in">
+        <div class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-4xl shadow-lg shadow-amber-500/30">
+          🎯
+        </div>
+        <h2 class="text-2xl sm:text-3xl font-black text-amber-300 tracking-wide mb-2">成語填填看</h2>
+        <p class="text-slate-400 text-sm mb-6 leading-relaxed">
+          考驗你的國語成語造詣！每題隨機隱藏一個關鍵字，從候選字中選出正確答案填補成語。
+        </p>
+
+        <!-- 遊戲規則卡片 -->
+        <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 mb-6 text-left space-y-2.5 text-xs sm:text-sm">
+          <div class="flex items-center gap-2.5 text-slate-300">
+            <span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 font-bold flex items-center justify-center shrink-0">1</span>
+            <span>每次挑戰隨機抽取 <strong>10 題</strong> 四字成語。</span>
+          </div>
+          <div class="flex items-center gap-2.5 text-slate-300">
+            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center shrink-0">2</span>
+            <span>每題答對得 <strong>10 分</strong>，滿分為 <strong>100 分</strong>。</span>
+          </div>
+          <div class="flex items-center gap-2.5 text-slate-300">
+            <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center shrink-0">3</span>
+            <span>每題擁有 <strong>15 秒倒數計時血條</strong>，超時視同答錯。</span>
+          </div>
+          <div class="flex items-center gap-2.5 text-slate-300">
+            <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 font-bold flex items-center justify-center shrink-0">4</span>
+            <span>答錯立即顯示正確字及完整成語解釋，加深印象！</span>
+          </div>
+        </div>
+
+        <!-- 開始挑戰按鈕 (高對比 + 打擊回饋) -->
+        <div class="space-y-3">
+          <button @click="startGame()" 
+                  class="w-full py-4 rounded-2xl font-black text-lg sm:text-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 shadow-xl shadow-amber-500/25 transition-all duration-150 border-b-4 border-amber-700">
+            開始挑戰 🚀
+          </button>
+          <a href="../index.html" 
+             class="inline-flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-amber-300 border border-slate-700 text-xs font-bold transition-all">
+            <span>🏠 返回遊戲大廳首頁</span>
+          </a>
+        </div>
+      </div>
+    </template>
+
+    <!-- ==================== 2. 進行中遊戲畫面 ==================== -->
+    <template x-if="screen === 'playing'">
+      <div class="w-full max-w-xl flex flex-col gap-4">
+
+        <!-- 雙血條儀表板 (獨立區分：進度血條 VS 時間血條) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+          
+          <!-- ① 答題進度條 (翡翠綠高對比色) -->
+          <div>
+            <div class="flex justify-between items-center text-xs font-bold mb-1.5">
+              <span class="text-emerald-400 flex items-center gap-1.5">
+                <span>🚩 答題進度</span>
+                <span class="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full text-[11px] border border-emerald-500/30" 
+                      x-text="`第 ${currentQuestionIndex + 1} / ${totalQuestions} 題`"></span>
+              </span>
+              <span class="text-amber-400 font-black text-sm" x-text="`目前得分：${score} 分`"></span>
+            </div>
+            <!-- 進度血條軌道 -->
+            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-700/60 p-0.5">
+              <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300 shadow-sm shadow-emerald-500/50"
+                   :style="`width: ${((currentQuestionIndex + 1) / totalQuestions) * 100}%`"></div>
+            </div>
+          </div>
+
+          <!-- ② 時間血條 (暖橙黃~警示紅漸變獨立血條) -->
+          <div>
+            <div class="flex justify-between items-center text-xs font-bold mb-1.5">
+              <span class="text-rose-400 flex items-center gap-1.5">
+                <span>⏳ 剩餘時間</span>
+                <span :class="timeLeft <= 5 ? 'text-rose-400 animate-pulse-fast font-black' : 'text-slate-300'"
+                      x-text="`${timeLeft.toFixed(1)} 秒`"></span>
+              </span>
+              <span class="text-[11px] text-slate-400 font-normal">限時 15 秒</span>
+            </div>
+            <!-- 時間血條軌道 -->
+            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-700/60 p-0.5">
+              <div class="h-full rounded-full transition-all duration-100 ease-linear"
+                   :class="timeLeft <= 4 ? 'bg-rose-500 shadow-rose-500/60 animate-pulse' : timeLeft <= 8 ? 'bg-amber-400 shadow-amber-400/50' : 'bg-cyan-400 shadow-cyan-400/50'"
+                   :style="`width: ${(timeLeft / questionTimeLimit) * 100}%`"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 題目展示卡片 (四字磚塊排版) -->
+        <div class="bg-slate-900 border-2 border-indigo-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden flex flex-col items-center">
+          
+          <!-- 提示標籤 -->
+          <div class="text-xs tracking-widest text-indigo-300 uppercase font-semibold mb-6 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
+            請選出空格中的正確字
+          </div>
+
+          <!-- 成語方塊展示區 (4 個大字方塊) -->
+          <div class="grid grid-cols-4 gap-2.5 sm:gap-4 w-full max-w-md my-2">
+            <template x-for="(char, idx) in currentQuestion.chars" :key="idx">
+              <div class="aspect-square flex items-center justify-center rounded-2xl font-black text-3xl sm:text-4xl shadow-lg transition-all duration-200 select-none"
+                   :class="idx === currentQuestion.hiddenIndex 
+                            ? 'bg-amber-500/20 border-2 border-dashed border-amber-400 text-amber-300 shadow-amber-500/20 animate-pulse' 
+                            : 'bg-slate-800 border-2 border-slate-700 text-slate-100 shadow-slate-950/50'">
+                <span x-text="idx === currentQuestion.hiddenIndex ? '？' : char"></span>
+              </div>
+            </template>
+          </div>
+
+          <!-- 成語涵義小提示 -->
+          <div class="mt-6 px-4 py-2 rounded-xl bg-slate-800/60 border border-slate-700/50 text-xs sm:text-sm text-slate-300 text-center max-w-md">
+            💡 <span class="font-bold text-slate-200">釋義提示：</span><span x-text="currentQuestion.meaning"></span>
+          </div>
+
+        </div>
+
+        <!-- 4 個候選字按鈕 (大觸控熱區 + 點擊打擊感微動效 + 停用防呆) -->
+        <div class="grid grid-cols-2 gap-3 sm:gap-4">
+          <template x-for="(opt, idx) in currentQuestion.options" :key="idx">
+            <button @click="selectOption(opt)"
+                    :disabled="isAnswerLocked"
+                    class="py-4 sm:py-5 px-4 rounded-2xl font-black text-2xl sm:text-3xl bg-slate-800 hover:bg-slate-700 text-amber-300 border-2 border-slate-700 hover:border-amber-400/60 shadow-lg shadow-slate-950/40 active:scale-95 active:border-amber-400 transition-all duration-150 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
+              <span class="text-xs text-slate-500 font-sans group-hover:text-amber-400/80" x-text="['A', 'B', 'C', 'D'][idx]"></span>
+              <span x-text="opt"></span>
+            </button>
+          </template>
+        </div>
+
+      </div>
+    </template>
+
+    <!-- ==================== 3. 結算畫面 ==================== -->
+    <template x-if="screen === 'result'">
+      <div class="w-full max-w-lg bg-slate-900 border-2 border-amber-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl text-center animate-pop-in">
+        
+        <!-- 結算勳章標誌 -->
+        <div class="w-20 h-20 mx-auto mb-3 rounded-2xl flex items-center justify-center text-4xl shadow-xl"
+             :class="score >= 90 ? 'bg-amber-500 text-slate-950 shadow-amber-500/40' : score >= 60 ? 'bg-indigo-600 text-white shadow-indigo-600/40' : 'bg-slate-700 text-slate-200 shadow-slate-700/40'">
+          <span x-text="score >= 90 ? '👑' : score >= 60 ? '🏅' : '📖'"></span>
+        </div>
+
+        <h2 class="text-2xl font-black text-slate-100 mb-1">挑戰完成！</h2>
+        <p class="text-xs text-slate-400 mb-4" x-text="getRatingRemark()"></p>
+
+        <!-- 分數大儀表 -->
+        <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-5 mb-5 flex justify-around items-center">
+          <div>
+            <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">最終得分</div>
+            <div class="text-4xl sm:text-5xl font-black text-amber-400 tracking-tight" x-text="`${score}`"></div>
+            <div class="text-[10px] text-slate-500 mt-0.5">總分 100 分</div>
+          </div>
+          <div class="h-12 w-px bg-slate-700"></div>
+          <div>
+            <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">答題成效</div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-emerald-400" x-text="`${score / 10} / 10 題`"></div>
+            <div class="text-[10px] text-slate-500 mt-0.5" x-text="`正確率 ${(score / 100) * 100}%`"></div>
+          </div>
+        </div>
+
+        <!-- 答題歷程清單 (收合/展開檢視) -->
+        <div class="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-3 mb-6 text-left max-h-48 overflow-y-auto space-y-2 text-xs">
+          <div class="font-bold text-slate-400 mb-1 px-1">題目回顧清單：</div>
+          <template x-for="(item, idx) in sessionQuestions" :key="idx">
+            <div class="p-2 rounded-lg flex items-center justify-between border"
+                 :class="item.isCorrect ? 'bg-emerald-950/30 border-emerald-800/40 text-emerald-300' : 'bg-rose-950/30 border-rose-800/40 text-rose-300'">
+              <div class="flex items-center gap-2">
+                <span x-text="item.isCorrect ? '✅' : '❌'"></span>
+                <span class="font-bold text-sm tracking-widest" x-text="item.idiom"></span>
+              </div>
+              <span class="text-[11px] opacity-80" x-text="item.isCorrect ? '+10 分' : '答錯/超時'"></span>
+            </div>
+          </template>
+        </div>
+
+        <!-- 再玩一次與回首頁按鈕 -->
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button @click="startGame()" 
+                  class="flex-1 py-4 rounded-2xl font-black text-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-slate-950 shadow-xl shadow-emerald-500/25 transition-all duration-150 border-b-4 border-emerald-800">
+            再挑戰一次 🔁
+          </button>
+          <a href="../index.html" 
+             class="flex-1 py-4 rounded-2xl font-black text-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-amber-300 border-2 border-slate-700 hover:border-amber-400/50 shadow-xl transition-all duration-150 flex items-center justify-center gap-2">
+            <span>🏠 返回大廳</span>
+          </a>
+        </div>
+      </div>
+    </template>
+
+  </main>
+
+  <!-- ==================== 答對慶祝動態浮層 ==================== -->
+  <div x-show="showCelebration" 
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 scale-90"
+       x-transition:enter-end="opacity-100 scale-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100 scale-100"
+       x-transition:leave-end="opacity-0 scale-95"
+       class="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
+    
+    <!-- 彩帶容器 (動態注入) -->
+    <div id="confetti-container" class="absolute inset-0 overflow-hidden pointer-events-none"></div>
+
+    <div class="bg-emerald-600 text-white font-black text-2xl sm:text-3xl px-8 py-5 rounded-3xl shadow-2xl shadow-emerald-500/50 border-4 border-emerald-300 flex items-center gap-3 animate-bounce-short">
+      <span class="text-4xl">🎉</span>
+      <span>答對了！+10 分</span>
+    </div>
+  </div>
+
+  <!-- ==================== 答錯／超時 彈跳視窗 (自動倒數關閉) ==================== -->
+  <div x-show="showWrongModal" 
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    
+    <div class="bg-slate-900 border-2 border-rose-500/60 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl text-center animate-pop-in relative">
+      <!-- 頂部圖示 -->
+      <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-3xl">
+        <span x-text="wrongReason === 'timeout' ? '⏰' : '💡'"></span>
+      </div>
+
+      <h3 class="text-xl sm:text-2xl font-black text-rose-400 mb-1" 
+          x-text="wrongReason === 'timeout' ? '時間到！很可惜' : '哎呀！答錯囉'"></h3>
+      <p class="text-xs text-slate-400 mb-4">別氣餒，先把這個成語學起來：</p>
+
+      <!-- 正確成語揭曉卡片 -->
+      <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-4">
+        <div class="text-xs text-slate-400 font-semibold mb-1">正確四字成語</div>
+        <div class="text-3xl font-black tracking-widest text-amber-300 mb-2">
+          <template x-for="(char, idx) in (currentQuestion ? currentQuestion.chars : [])" :key="idx">
+            <span :class="idx === currentQuestion.hiddenIndex ? 'text-emerald-400 underline underline-offset-4 decoration-2' : ''" 
+                  x-text="char"></span>
+          </template>
+        </div>
+        <div class="text-xs text-slate-300 text-left bg-slate-900/60 p-2.5 rounded-xl border border-slate-700/50 leading-relaxed">
+          <span class="font-bold text-amber-400">【釋義】</span>
+          <span x-text="currentQuestion ? currentQuestion.meaning : ''"></span>
+        </div>
+      </div>
+
+      <!-- 自動關閉倒數進度提示 -->
+      <div class="flex items-center justify-between text-xs text-slate-400">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+          <span x-text="`${modalAutoCloseSeconds} 秒後自動進入下一題...`"></span>
+        </span>
+        <button @click="closeWrongModal()" 
+                class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 text-xs font-bold border border-slate-600 transition-all">
+          下一題 ➔
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 頁尾宣告 -->
+  <footer class="w-full text-center py-3 text-xs text-slate-500 border-t border-slate-800/80">
+    國小成語填空挑戰賽・單一檔案互動教材
+  </footer>
+
+  <!-- ==================== 遊戲邏輯與 Web Audio API 音效引擎 ==================== -->
+  <script>
+    /**
+     * Web Audio API 專用合成音效引擎 (零外部 mp3 依賴)
+     */
+    const AudioEngine = {
+      ctx: null,
+      muted: false,
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+
+      playSound(type) {
+        if (this.muted) return;
+        this.init();
+        const ctx = this.ctx;
+        const now = ctx.currentTime;
+
+        try {
+          switch (type) {
+            case 'click': {
+              // 輕巧俐落的點擊音
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'triangle';
+              osc.frequency.setValueAtTime(650, now);
+              osc.frequency.exponentialRampToValueAtTime(250, now + 0.04);
+              gain.gain.setValueAtTime(0.2, now);
+              gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start(now);
+              osc.stop(now + 0.04);
+              break;
+            }
+
+            case 'correct': {
+              // 勝利慶祝雙音和弦琶音 (C5 -> E5 -> G5 -> C6)
+              const notes = [523.25, 659.25, 783.99, 1046.50];
+              notes.forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+                gain.gain.setValueAtTime(0.2, now + idx * 0.07);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.22);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + idx * 0.07);
+                osc.stop(now + idx * 0.07 + 0.22);
+              });
+              break;
+            }
+
+            case 'wrong': {
+              // 低沈下滑警示鋸齒音
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(240, now);
+              osc.frequency.linearRampToValueAtTime(110, now + 0.28);
+              gain.gain.setValueAtTime(0.25, now);
+              gain.gain.linearRampToValueAtTime(0.001, now + 0.28);
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start(now);
+              osc.stop(now + 0.28);
+              break;
+            }
+
+            case 'timeout': {
+              // 急促雙聲嗶聲
+              [0, 0.12].forEach((offset) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(350, now + offset);
+                gain.gain.setValueAtTime(0.18, now + offset);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.08);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + offset);
+                osc.stop(now + offset + 0.08);
+              });
+              break;
+            }
+
+            case 'tick': {
+              // 最後 3 秒急促倒數滴答聲
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(880, now);
+              gain.gain.setValueAtTime(0.12, now);
+              gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start(now);
+              osc.stop(now + 0.03);
+              break;
+            }
+
+            case 'gameover': {
+              // 結算通關大號角
+              const chord = [392.00, 523.25, 659.25, 783.99]; // G4, C5, E5, G5
+              chord.forEach((freq) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now);
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.7);
+              });
+              break;
+            }
+          }
+        } catch (err) {
+          console.warn('音效播放失敗:', err);
+        }
+      }
+    };
+
+    // 全域快速播放函數
+    function playSound(type) {
+      AudioEngine.playSound(type);
+    }
+
+    /**
+     * 成語資料庫 (精選常見且具教育意義之四字成語，含釋義與易混淆干擾字)
+     */
+    const IDIOM_DATABASE = [
+      {
+        idiom: "守株待兔",
+        meaning: "比喻死守狹隘經驗，不知變通；或妄想不勞而獲。",
+        confusions: { 0: ["首", "手"], 1: ["蛛", "珠", "朱"], 2: ["帶", "代"], 3: ["肚", "度"] }
+      },
+      {
+        idiom: "畫蛇添足",
+        meaning: "比喻多此一舉，不但無益，反而有害。",
+        confusions: { 0: ["話", "化"], 1: ["折", "舌"], 2: ["天", "田"], 3: ["族", "阻"] }
+      },
+      {
+        idiom: "掩耳盜鈴",
+        meaning: "比喻自欺欺人，明明掩蓋不住的事卻硬要掩蓋。",
+        confusions: { 0: ["演", "眼"], 1: ["爾", "兒"], 2: ["到", "倒"], 3: ["零", "靈", "林"] }
+      },
+      {
+        idiom: "亡羊補牢",
+        meaning: "比喻犯錯或受損後及時採取補救措施，還不算太晚。",
+        confusions: { 0: ["王", "網"], 1: ["陽", "揚"], 2: ["捕", "哺"], 3: ["勞", "落"] }
+      },
+      {
+        idiom: "井底之蛙",
+        meaning: "比喻見識狹窄、眼界短淺的人。",
+        confusions: { 0: ["景", "警"], 1: ["低", "抵"], 2: ["知", "枝"], 3: ["娃", "哇"] }
+      },
+      {
+        idiom: "對牛彈琴",
+        meaning: "比喻對不懂道理的人講高深道理，白費口舌。",
+        confusions: { 0: ["隊", "退"], 1: ["午", "友"], 2: ["談", "壇"], 3: ["晴", "禽"] }
+      },
+      {
+        idiom: "虎頭蛇尾",
+        meaning: "比喻做事起頭氣勢很大，結尾卻草率了事。",
+        confusions: { 0: ["胡", "湖"], 1: ["投", "透"], 2: ["射", "折"], 3: ["委", "偽"] }
+      },
+      {
+        idiom: "杯弓蛇影",
+        meaning: "比喻因疑神疑鬼而引起無端的恐懼與驚慌。",
+        confusions: { 0: ["悲", "背"], 1: ["公", "工"], 2: ["舌", "色"], 3: ["景", "影"] }
+      },
+      {
+        idiom: "狐假虎威",
+        meaning: "比喻藉著別人的權勢來欺壓他人或作威作福。",
+        confusions: { 0: ["胡", "壺"], 1: ["甲", "價"], 2: ["戶", "呼"], 3: ["危", "微"] }
+      },
+      {
+        idiom: "破釜沉舟",
+        meaning: "比喻做事果決，抱著必死或必勝的決心，不留退路。",
+        confusions: { 0: ["珀", "迫"], 1: ["斧", "父", "府"], 2: ["陳", "晨"], 3: ["州", "周"] }
+      },
+      {
+        idiom: "臥薪嚐膽",
+        meaning: "比喻刻苦自勵，奮發圖強，以圖報仇雪恥。",
+        confusions: { 0: ["握", "渥"], 1: ["新", "心"], 2: ["常", "長"], 3: ["膽", "但"] }
+      },
+      {
+        idiom: "車水馬龍",
+        meaning: "形容車輛絡繹不絕、繁華熱鬧的景象。",
+        confusions: { 0: ["徹", "扯"], 1: ["水", "睡"], 2: ["碼", "螞"], 3: ["隆", "籠"] }
+      },
+      {
+        idiom: "千鈞一髮",
+        meaning: "比喻情況極端危急，稍有不慎就會造成嚴重後果。",
+        confusions: { 0: ["遷", "前"], 1: ["均", "軍", "君"], 2: ["依", "衣"], 3: ["發", "法"] }
+      },
+      {
+        idiom: "水落石出",
+        meaning: "比喻事情真相大白。",
+        confusions: { 0: ["誰", "睡"], 1: ["絡", "酪"], 2: ["時", "十"], 3: ["初", "處"] }
+      },
+      {
+        idiom: "拔苗助長",
+        meaning: "比喻違反自然規律，急於求成，反而把事情弄糟。",
+        confusions: { 0: ["跋", "把"], 1: ["描", "瞄"], 2: ["住", "祝"], 3: ["掌", "帳"] }
+      },
+      {
+        idiom: "指鹿為馬",
+        meaning: "比喻公然顛倒是非，歪曲事實。",
+        confusions: { 0: ["紙", "止"], 1: ["路", "陸"], 2: ["維", "微"], 3: ["碼", "媽"] }
+      },
+      {
+        idiom: "雪中送炭",
+        meaning: "比喻在他人急需時提供實質的幫助。",
+        confusions: { 0: ["血", "學"], 1: ["鐘", "忠"], 2: ["宋", "訟"], 3: ["碳", "探"] }
+      },
+      {
+        idiom: "錦上添花",
+        meaning: "比喻在美好事物上再增添美好，使之更加完美。",
+        confusions: { 0: ["緊", "謹"], 1: ["尚", "上"], 2: ["天", "填"], 3: ["華", "化"] }
+      },
+      {
+        idiom: "紙上談兵",
+        meaning: "比喻空談理論，不能切合實際解決問題。",
+        confusions: { 0: ["指", "止"], 1: ["尚", "傷"], 2: ["壇", "彈"], 3: ["冰", "柄"] }
+      },
+      {
+        idiom: "一石二鳥",
+        meaning: "比喻做一件事情同時得到兩種收穫。",
+        confusions: { 0: ["依", "衣"], 1: ["時", "十"], 2: ["而", "耳"], 3: ["島", "倒"] }
+      },
+      {
+        idiom: "自相矛盾",
+        meaning: "比喻說話或行事前後牴觸、無法自圓其說。",
+        confusions: { 0: ["字", "志"], 1: ["想", "箱"], 2: ["茂", "貿"], 3: ["頓", "盾"] }
+      },
+      {
+        idiom: "胸有成竹",
+        meaning: "比喻在做事之前已經有了成熟的盤算與把握。",
+        confusions: { 0: ["兇", "兄"], 1: ["友", "右"], 2: ["成", "城"], 3: ["逐", "燭"] }
+      },
+      {
+        idiom: "名落孫山",
+        meaning: "比喻考試未被錄取或競賽榜上無名。",
+        confusions: { 0: ["明", "民"], 1: ["絡", "酪"], 2: ["申", "伸"], 3: ["衫", "煽"] }
+      },
+      {
+        idiom: "塞翁失馬",
+        meaning: "比喻暫時的損失，可能會帶來意想不到的好處。",
+        confusions: { 0: ["賽", "思"], 1: ["嗡", "翁"], 2: ["施", "濕"], 3: ["碼", "媽"] }
+      },
+      {
+        idiom: "風吹草動",
+        meaning: "比喻輕微的動靜或微小的變故。",
+        confusions: { 0: ["豐", "封"], 1: ["催", "垂"], 2: ["操", "糙"], 3: ["洞", "棟"] }
+      },
+      {
+        idiom: "循序漸進",
+        meaning: "按一定的順序、步驟逐漸進展或提高。",
+        confusions: { 0: ["巡", "詢"], 1: ["續", "敘"], 2: ["見", "建"], 3: ["晉", "盡"] }
+      },
+      {
+        idiom: "盲人摸象",
+        meaning: "比喻只憑片面了解就妄下結論，無法窺見全貌。",
+        confusions: { 0: ["忙", "茫"], 1: ["仁", "任"], 2: ["膜", "漠"], 3: ["像", "向"] }
+      },
+      {
+        idiom: "順藤摸瓜",
+        meaning: "比喻順著現有線索尋找，進而查清事情真相。",
+        confusions: { 0: ["舜", "瞬"], 1: ["疼", "騰"], 2: ["模", "寞"], 3: ["刮", "掛"] }
+      },
+      {
+        idiom: "驚弓之鳥",
+        meaning: "比喻曾受過驚嚇，遇到一點動靜就惶恐不安的人。",
+        confusions: { 0: ["精", "經"], 1: ["公", "功"], 2: ["枝", "知"], 3: ["島", "倒"] }
+      },
+      {
+        idiom: "入木三分",
+        meaning: "原形容書法筆力雄勁，後比喻見解深刻、描繪生動。",
+        confusions: { 0: ["如", "儒"], 1: ["目", "沐"], 2: ["山", "珊"], 3: ["紛", "分"] }
+      }
+    ];
+
+    /**
+     * Alpine.js 遊戲應用狀態與核心控制器
+     */
+    function idiomGameApp() {
+      return {
+        // 畫面狀態：'start' | 'playing' | 'result'
+        screen: 'start',
+
+        // 系統控制項
+        isMuted: false,
+        isAnswerLocked: false,
+        showCelebration: false,
+        showWrongModal: false,
+        wrongReason: 'wrong', // 'wrong' | 'timeout'
+
+        // 關卡與題目設定
+        totalQuestions: 10,
+        currentQuestionIndex: 0,
+        score: 0,
+        sessionQuestions: [],
+        currentQuestion: null,
+
+        // 倒數計時器變數
+        questionTimeLimit: 15, // 每題 15 秒
+        timeLeft: 15,
+        timerId: null,
+        lastTickSecond: null,
+
+        // 彈跳視窗自動關閉
+        modalAutoCloseSeconds: 2,
+        modalCountdownTimer: null,
+        modalAutoCloseTimer: null,
+
+        initGame() {
+          // 初始化音訊引擎
+          AudioEngine.muted = this.isMuted;
+        },
+
+        toggleMute() {
+          this.isMuted = !this.isMuted;
+          AudioEngine.muted = this.isMuted;
+          if (!this.isMuted) playSound('click');
+        },
+
+        /**
+         * 開始新遊戲
+         */
+        startGame() {
+          playSound('click');
+          this.score = 0;
+          this.currentQuestionIndex = 0;
+          this.isAnswerLocked = false;
+          this.showCelebration = false;
+          this.showWrongModal = false;
+
+          // 隨機選取 10 題不重複成語
+          const shuffledPool = [...IDIOM_DATABASE].sort(() => 0.5 - Math.random());
+          const selected = shuffledPool.slice(0, this.totalQuestions);
+
+          // 構建每道題目的填空與選項
+          this.sessionQuestions = selected.map((item) => {
+            const chars = item.idiom.split('');
+            const hiddenIndex = Math.floor(Math.random() * 4); // 隨機隱藏 0~3 其中一字
+            const correctChar = chars[hiddenIndex];
+
+            // 產生干擾字
+            let distractors = [];
+            if (item.confusions && item.confusions[hiddenIndex]) {
+              distractors = [...item.confusions[hiddenIndex]];
+            }
+
+            // 若干擾字不足 3 個，從其他成語字元中隨機補充
+            while (distractors.length < 3) {
+              const randomIdiom = IDIOM_DATABASE[Math.floor(Math.random() * IDIOM_DATABASE.length)];
+              const randomChar = randomIdiom.idiom[Math.floor(Math.random() * 4)];
+              if (randomChar !== correctChar && !distractors.includes(randomChar)) {
+                distractors.push(randomChar);
+              }
+            }
+
+            // 取前 3 個干擾字與正確字合成 4 個選項並隨機打散
+            const options = [correctChar, ...distractors.slice(0, 3)].sort(() => 0.5 - Math.random());
+
+            return {
+              idiom: item.idiom,
+              meaning: item.meaning,
+              chars: chars,
+              hiddenIndex: hiddenIndex,
+              correctChar: correctChar,
+              options: options,
+              isCorrect: false
+            };
+          });
+
+          this.screen = 'playing';
+          this.loadQuestion(0);
+        },
+
+        /**
+         * 載入特定題數
+         */
+        loadQuestion(index) {
+          this.currentQuestionIndex = index;
+          this.currentQuestion = this.sessionQuestions[index];
+          this.isAnswerLocked = false;
+          this.showCelebration = false;
+          this.showWrongModal = false;
+
+          // 重設並啟動計時器
+          this.startCountdown();
+        },
+
+        /**
+         * 倒數計時器控制 (15 秒獨立時間血條)
+         */
+        startCountdown() {
+          clearInterval(this.timerId);
+          this.timeLeft = this.questionTimeLimit;
+          this.lastTickSecond = null;
+
+          const stepMs = 100;
+          this.timerId = setInterval(() => {
+            this.timeLeft = Math.max(0, this.timeLeft - stepMs / 1000);
+
+            // 最後 3 秒播放滴答聲 (每一整秒播放一次)
+            const floorSec = Math.ceil(this.timeLeft);
+            if (floorSec <= 3 && floorSec > 0 && floorSec !== this.lastTickSecond) {
+              this.lastTickSecond = floorSec;
+              playSound('tick');
+            }
+
+            // 超時處理
+            if (this.timeLeft <= 0) {
+              clearInterval(this.timerId);
+              this.handleTimeout();
+            }
+          }, stepMs);
+        },
+
+        /**
+         * 玩家選取候選字
+         */
+        selectOption(selectedChar) {
+          if (this.isAnswerLocked) return;
+          this.isAnswerLocked = true;
+          clearInterval(this.timerId);
+
+          const isCorrect = selectedChar === this.currentQuestion.correctChar;
+          this.sessionQuestions[this.currentQuestionIndex].isCorrect = isCorrect;
+
+          if (isCorrect) {
+            // 答對邏輯
+            this.score += 10;
+            playSound('correct');
+            this.triggerCelebration();
+
+            setTimeout(() => {
+              this.showCelebration = false;
+              this.nextQuestion();
+            }, 1200);
+
+          } else {
+            // 答錯邏輯
+            playSound('wrong');
+            this.wrongReason = 'wrong';
+            this.openWrongModal();
+          }
+        },
+
+        /**
+         * 超時答錯處理
+         */
+        handleTimeout() {
+          if (this.isAnswerLocked) return;
+          this.isAnswerLocked = true;
+          this.sessionQuestions[this.currentQuestionIndex].isCorrect = false;
+
+          playSound('timeout');
+          this.wrongReason = 'timeout';
+          this.openWrongModal();
+        },
+
+        /**
+         * 開啟答錯彈跳視窗並啟動自動倒數關閉
+         */
+        openWrongModal() {
+          this.showWrongModal = true;
+          this.modalAutoCloseSeconds = 2;
+
+          clearInterval(this.modalCountdownTimer);
+          clearTimeout(this.modalAutoCloseTimer);
+
+          // 倒數計時數字更新
+          this.modalCountdownTimer = setInterval(() => {
+            this.modalAutoCloseSeconds -= 1;
+            if (this.modalAutoCloseSeconds <= 0) {
+              clearInterval(this.modalCountdownTimer);
+            }
+          }, 1000);
+
+          // 2.2 秒後自動進入下一題
+          this.modalAutoCloseTimer = setTimeout(() => {
+            this.closeWrongModal();
+          }, 2200);
+        },
+
+        /**
+         * 關閉答錯彈跳視窗
+         */
+        closeWrongModal() {
+          clearInterval(this.modalCountdownTimer);
+          clearTimeout(this.modalAutoCloseTimer);
+          this.showWrongModal = false;
+          this.nextQuestion();
+        },
+
+        /**
+         * 進入下一題或結算
+         */
+        nextQuestion() {
+          if (this.currentQuestionIndex + 1 < this.totalQuestions) {
+            this.loadQuestion(this.currentQuestionIndex + 1);
+          } else {
+            this.finishGame();
+          }
+        },
+
+        /**
+         * 結束遊戲結算
+         */
+        finishGame() {
+          clearInterval(this.timerId);
+          this.screen = 'result';
+          playSound('gameover');
+        },
+
+        /**
+         * 觸發答對彩帶動畫
+         */
+        triggerCelebration() {
+          this.showCelebration = true;
+          const container = document.getElementById('confetti-container');
+          if (!container) return;
+          container.innerHTML = '';
+
+          const colors = ['#10B981', '#F59E0B', '#3B82F6', '#EC4899', '#8B5CF6'];
+          for (let i = 0; i < 35; i++) {
+            const piece = document.createElement('div');
+            piece.className = 'confetti-piece';
+            piece.style.left = Math.random() * 100 + 'vw';
+            piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            piece.style.animationDelay = (Math.random() * 0.4) + 's';
+            piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+            container.appendChild(piece);
+          }
+        },
+
+        /**
+         * 結算評語
+         */
+        getRatingRemark() {
+          if (this.score === 100) return '滿分通關！你是當之無愧的成語大宗師！👑';
+          if (this.score >= 80) return '太厲害了！成語造詣非同凡響！🌟';
+          if (this.score >= 60) return '表現亮眼！多加練習很快就能拿到滿分喔！💪';
+          return '熟能生巧！再次挑戰加深成語記憶吧！🌱';
+        }
+      };
+    }
+  </script>
+</body>
+</html>

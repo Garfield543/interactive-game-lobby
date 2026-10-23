@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>太鼓咚咚鏘：節奏大師特訓班</title>
+  <!-- Google Fonts: 俐落且具張力的字型 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Noto+Sans+TC:wght@500;700;900&family=Yuji+Boku&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            festive: {
+              red: '#e60026',
+              deepred: '#5c0612',
+              darkred: '#2b0308',
+              gold: '#ffd152',
+              lightgold: '#fff2a8',
+              blue: '#00a8ff',
+              cyan: '#00d2d3',
+              drumwood: '#3e1a0d',
+              parchment: '#fcf6ea'
+            }
+          },
+          fontFamily: {
+            festival: ['"Mochiy Pop One"', '"Noto Sans TC"', 'sans-serif'],
+            calligraphy: ['"Yuji Boku"', '"Noto Sans TC"', 'serif'],
+            sans: ['"Noto Sans TC"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      background-color: #260206;
+      color: #fff;
+      font-family: 'Noto Sans TC', sans-serif;
+      touch-action: none;
+    }
+
+    /* 祭典華麗深紅底色與金紋質感 */
+    .bg-festival-pattern {
+      background: 
+        radial-gradient(circle at 50% 30%, #780d1e 0%, #45050e 55%, #1f0105 100%);
+    }
+
+    /* 金色櫻花微光動效 */
+    @keyframes floatPetal {
+      0% { transform: translateY(-30px) rotate(0deg) translateX(0); opacity: 0; }
+      20% { opacity: 0.9; }
+      80% { opacity: 0.8; }
+      100% { transform: translateY(105vh) rotate(540deg) translateX(80px); opacity: 0; }
+    }
+
+    /* 打擊觸控漣漪特效 */
+    .touch-ripple {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%) scale(0.2);
+      animation: rippleExpand 0.45s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+      z-index: 45;
+    }
+    @keyframes rippleExpand {
+      0% {
+        transform: translate(-50%, -50%) scale(0.2);
+        opacity: 0.9;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(2.8);
+        opacity: 0;
+      }
+    }
+
+    /* 太鼓敲擊震波 */
+    @keyframes drumBounce {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.16); }
+      100% { transform: scale(1); }
+    }
+    .drum-hit-anim {
+      animation: drumBounce 0.15s ease-out;
+    }
+
+    /* 判定字樣彈出特效 */
+    @keyframes judgePop {
+      0% { transform: translate(-50%, -50%) scale(0.4) rotate(-6deg); opacity: 0; }
+      40% { transform: translate(-50%, -80%) scale(1.35) rotate(2deg); opacity: 1; }
+      75% { transform: translate(-50%, -95%) scale(1.1) rotate(0deg); opacity: 1; }
+      100% { transform: translate(-50%, -125%) scale(0.85); opacity: 0; }
+    }
+    .judge-text-anim {
+      animation: judgePop 0.55s ease-out forwards;
+      pointer-events: none;
+    }
+
+    /* 魂量表燃燒光暈 */
+    @keyframes fireGlow {
+      0%, 100% { filter: drop-shadow(0 0 8px #ff4500) drop-shadow(0 0 16px #ffd700); }
+      50% { filter: drop-shadow(0 0 16px #ff0055) drop-shadow(0 0 26px #ffea00); }
+    }
+    .soul-fire {
+      animation: fireGlow 1.2s infinite alternate;
+    }
+
+    /* 左右點擊指示半透明浮水印 */
+    .touch-zone-hint {
+      transition: background-color 0.15s ease, transform 0.1s ease;
+    }
+    .touch-zone-hint.active-left {
+      background-color: rgba(230, 0, 38, 0.22);
+    }
+    .touch-zone-hint.active-right {
+      background-color: rgba(0, 168, 255, 0.22);
+    }
+  </style>
+</head>
+<body class="bg-festival-pattern relative w-full h-full select-none">
+
+  <!-- ==================== 櫻花瓣飄落層 (Canvas) ==================== -->
+  <canvas id="petalCanvas" class="absolute inset-0 pointer-events-none z-0"></canvas>
+
+  <!-- ==================== 頂部祭典提燈裝飾 ==================== -->
+  <div class="absolute top-0 left-0 w-full pointer-events-none z-10 flex justify-between px-4 sm:px-12 pt-1 opacity-70">
+    <div class="flex gap-3">
+      <div class="flex flex-col items-center">
+        <div class="w-1.5 h-3 bg-amber-600"></div>
+        <div class="px-2 py-1.5 rounded-b-xl bg-gradient-to-b from-red-600 to-red-800 border border-amber-400 text-[11px] font-black text-amber-200 shadow-lg shadow-red-900/60 font-festival">祭</div>
+      </div>
+      <div class="flex flex-col items-center">
+        <div class="w-1.5 h-2 bg-amber-600"></div>
+        <div class="px-2 py-1.5 rounded-b-xl bg-gradient-to-b from-red-600 to-red-800 border border-amber-400 text-[11px] font-black text-amber-200 shadow-lg shadow-red-900/60 font-festival">典</div>
+      </div>
+    </div>
+    <div class="flex gap-3">
+      <div class="flex flex-col items-center">
+        <div class="w-1.5 h-2 bg-amber-600"></div>
+        <div class="px-2 py-1.5 rounded-b-xl bg-gradient-to-b from-red-600 to-red-800 border border-amber-400 text-[11px] font-black text-amber-200 shadow-lg shadow-red-900/60 font-festival">咚</div>
+      </div>
+      <div class="flex flex-col items-center">
+        <div class="w-1.5 h-3 bg-amber-600"></div>
+        <div class="px-2 py-1.5 rounded-b-xl bg-gradient-to-b from-sky-600 to-blue-800 border border-amber-400 text-[11px] font-black text-amber-200 shadow-lg shadow-blue-900/60 font-festival">鏘</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 遊戲主畫面畫布 (音樂音軌 Canvas) ==================== -->
+  <div id="gameTrackContainer" class="absolute inset-0 z-10 flex items-center justify-center">
+    <canvas id="trackCanvas" class="w-full h-full block"></canvas>
+  </div>
+
+  <!-- ==================== 浮動 UI 資訊層 (半透明無遮擋) ==================== -->
+  <div id="hudOverlay" class="absolute inset-0 pointer-events-none z-20 flex flex-col justify-between p-3 sm:p-5">
+    
+    <!-- 頂端 HUD：左側分數與魂量表、中央歌曲進度、右側控制與連段 -->
+    <div class="flex justify-between items-start w-full">
+      
+      <!-- 左上角：魂量表與得點 -->
+      <div class="flex flex-col gap-1.5">
+        <!-- 魂量表 -->
+        <div class="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-full border border-amber-500/30 shadow-md">
+          <span id="soulIcon" class="text-base sm:text-lg">🏮</span>
+          <div class="flex flex-col">
+            <div class="flex justify-between items-center text-[10px] sm:text-xs font-bold text-amber-300">
+              <span>魂氣魄量表</span>
+              <span id="soulPercentText" class="font-mono">0%</span>
+            </div>
+            <div class="w-28 sm:w-44 h-2.5 sm:h-3 bg-neutral-900/90 rounded-full overflow-hidden border border-amber-500/40 p-0.5">
+              <div id="soulBar" class="h-full rounded-full transition-all duration-150 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 當前得分 -->
+        <div class="bg-black/35 backdrop-blur-sm px-3.5 py-1 rounded-2xl border border-white/10 w-fit">
+          <span class="text-[10px] text-amber-300 font-bold tracking-wider">得點</span>
+          <div id="scoreText" class="text-xl sm:text-2xl font-black font-mono tracking-widest text-amber-200 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+            0000000
+          </div>
+        </div>
+      </div>
+
+      <!-- 頂部中央：歌曲名稱與動態速度徽章 -->
+      <div class="hidden sm:flex flex-col items-center">
+        <div class="flex items-center gap-2 bg-black/50 backdrop-blur-md px-4 py-1 rounded-full border border-amber-400/30 text-amber-200 shadow-lg">
+          <span class="text-xs">🌸</span>
+          <span id="songTitleDisplay" class="text-xs sm:text-sm font-black tracking-wide font-festival">夏祭花火・迎神音頭</span>
+          <span class="text-xs">🌸</span>
+        </div>
+        <!-- 友善動態速度狀態 -->
+        <div id="speedBadge" class="mt-1 px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-[10px] text-emerald-300 font-bold transition-colors">
+          🍃 慢速適應中 1.0x
+        </div>
+      </div>
+
+      <!-- 右上角：Combo 連段數與功能鍵 -->
+      <div class="flex flex-col items-end gap-2">
+        <!-- 快速功能鍵 (可點擊) -->
+        <div class="flex gap-2 pointer-events-auto">
+          <a href="../index.html" 
+             class="h-9 sm:h-10 px-3 rounded-full bg-black/60 hover:bg-black/85 active:scale-95 border border-amber-500/40 flex items-center justify-center text-xs font-bold text-amber-200 shadow-md transition-all gap-1 font-festival" 
+             title="返回遊戲大廳">
+            <span>🏠</span>
+            <span class="hidden sm:inline">大廳</span>
+          </a>
+          <button id="btnMute" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/50 hover:bg-black/80 active:scale-95 border border-amber-500/30 flex items-center justify-center text-sm shadow-md transition-all" title="音效開關">
+            🔊
+          </button>
+          <button id="btnPause" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/50 hover:bg-black/80 active:scale-95 border border-amber-500/30 flex items-center justify-center text-sm shadow-md transition-all" title="暫停遊戲">
+            ⏸️
+          </button>
+        </div>
+
+        <!-- 連段數 (連打大字漂浮) -->
+        <div id="comboContainer" class="flex flex-col items-end opacity-0 transition-opacity duration-200">
+          <div class="flex items-baseline gap-1">
+            <span id="comboCount" class="text-3xl sm:text-5xl font-black font-festival tracking-tighter text-amber-300 drop-shadow-[0_0_12px_rgba(255,200,0,0.8)]">
+              0
+            </span>
+            <span class="text-xs sm:text-sm font-black text-amber-100 font-festival">連段</span>
+          </div>
+          <div id="comboRankTitle" class="text-[10px] font-bold text-amber-400/90 tracking-wider">
+            太鼓發動！
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 底部隱形左右觸控提示浮水印 (兼顧零虛擬鍵與大拇指友善引導) -->
+    <div class="flex justify-between items-end w-full pb-2 px-1 text-center select-none pointer-events-none">
+      
+      <!-- 左側：咚 (紅色) 提示浮水印 -->
+      <div class="flex items-center gap-2 bg-gradient-to-r from-red-950/70 to-red-900/30 backdrop-blur-[2px] border border-red-500/30 px-3 sm:px-4 py-2 rounded-2xl text-red-200 shadow-lg">
+        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-600 border border-white flex items-center justify-center font-black text-white text-xs sm:text-sm font-festival shadow-[0_0_10px_#e60026]">
+          咚
+        </div>
+        <div class="text-left">
+          <div class="text-[11px] sm:text-xs font-black text-red-100">敲擊左半螢幕</div>
+          <div class="text-[9px] text-red-300/80">電腦按鍵：<kbd class="px-1 py-0.2 bg-black/40 rounded border border-red-400/40 font-mono">F</kbd> 或 <kbd class="px-1 py-0.2 bg-black/40 rounded border border-red-400/40 font-mono">J</kbd></div>
+        </div>
+      </div>
+
+      <!-- 右側：鏘 (藍色) 提示浮水印 -->
+      <div class="flex items-center gap-2 bg-gradient-to-l from-sky-950/70 to-sky-900/30 backdrop-blur-[2px] border border-sky-500/30 px-3 sm:px-4 py-2 rounded-2xl text-sky-200 shadow-lg">
+        <div class="text-right">
+          <div class="text-[11px] sm:text-xs font-black text-sky-100">敲擊右半螢幕</div>
+          <div class="text-[9px] text-sky-300/80">電腦按鍵：<kbd class="px-1 py-0.2 bg-black/40 rounded border border-sky-400/40 font-mono">D</kbd> 或 <kbd class="px-1 py-0.2 bg-black/40 rounded border border-sky-400/40 font-mono">K</kbd></div>
+        </div>
+        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-sky-500 border border-white flex items-center justify-center font-black text-white text-xs sm:text-sm font-festival shadow-[0_0_10px_#00a8ff]">
+          鏘
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ==================== 左右大面積全螢幕隱形觸控層 ==================== -->
+  <!-- 左半邊觸控區 (咚) -->
+  <div id="touchLeft" class="absolute top-0 left-0 w-1/2 h-full touch-zone-hint cursor-pointer" style="z-index: 15; touch-action: none;" title="敲擊：咚 (紅色)"></div>
+  <!-- 右半邊觸控區 (鏘) -->
+  <div id="touchRight" class="absolute top-0 right-0 w-1/2 h-full touch-zone-hint cursor-pointer" style="z-index: 15; touch-action: none;" title="敲擊：鏘 (藍色)"></div>
+
+  <!-- 打擊文字彈出容器 -->
+  <div id="judgeFloatContainer" class="absolute inset-0 pointer-events-none z-30 overflow-hidden"></div>
+
+
+  <!-- ==================== 1. 遊戲開始 / 歌曲選單 Modal ==================== -->
+  <div id="startModal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+    <div class="relative w-full max-w-lg bg-gradient-to-b from-[#400810] to-[#1c0205] border-2 border-amber-500/60 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-red-950/80 text-center text-neutral-100">
+      
+      <!-- 祭典裝飾掛飾 -->
+      <div class="absolute -top-5 left-1/2 -translate-x-1/2 px-5 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 font-black text-xs tracking-wider shadow-lg border border-amber-300 font-festival">
+        🏮 歡樂慶典・日式祭典風 🏮
+      </div>
+
+      <!-- 標題 -->
+      <div class="mt-2 mb-4">
+        <h1 class="text-2xl sm:text-3xl font-black text-amber-300 tracking-wide font-festival drop-shadow-[0_2px_10px_rgba(255,200,0,0.5)]">
+          太鼓咚咚鏘
+        </h1>
+        <div class="text-xs sm:text-sm text-amber-200/80 font-bold mt-1 tracking-widest font-festival">
+          🥁 節奏大師特訓班 🥁
+        </div>
+      </div>
+
+      <!-- 操作簡介卡 -->
+      <div class="bg-black/50 border border-amber-500/30 rounded-2xl p-3.5 mb-5 text-left text-xs space-y-2">
+        <div class="text-amber-300 font-bold flex items-center gap-1.5 border-b border-amber-500/20 pb-1.5">
+          <span>✨</span>
+          <span>左右大面積觸控（手機免虛擬鍵）</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-center pt-1">
+          <div class="bg-red-950/70 border border-red-500/40 rounded-xl p-2">
+            <span class="inline-block w-6 h-6 rounded-full bg-red-600 text-white font-bold leading-6 mb-1">咚</span>
+            <div class="font-bold text-red-200">點擊螢幕左半邊</div>
+            <div class="text-[10px] text-red-300/70">鍵盤：F 或 J 鍵</div>
+          </div>
+          <div class="bg-sky-950/70 border border-sky-500/40 rounded-xl p-2">
+            <span class="inline-block w-6 h-6 rounded-full bg-sky-500 text-white font-bold leading-6 mb-1">鏘</span>
+            <div class="font-bold text-sky-200">點擊螢幕右半邊</div>
+            <div class="text-[10px] text-sky-300/70">鍵盤：D 或 K 鍵</div>
+          </div>
+        </div>
+        <div class="text-[11px] text-amber-200/70 text-center pt-1 leading-relaxed">
+          💡 貼心設計：開局速度超慢、判定範圍寬鬆！連打 Combo 速度漸進加速，若 Miss 還會溫柔回落哦！
+        </div>
+      </div>
+
+      <!-- 歌曲選擇清單 -->
+      <div class="text-left mb-5">
+        <div class="text-xs font-bold text-amber-300 mb-2 flex items-center justify-between">
+          <span>🎵 選擇挑戰曲目</span>
+          <span class="text-[10px] text-neutral-400">點擊切換曲目</span>
+        </div>
+        <div class="space-y-2" id="songSelectList">
+          <!-- 曲目 1 -->
+          <button onclick="selectSong(0)" data-song="0" class="song-card w-full text-left p-3 rounded-xl border-2 border-amber-400 bg-amber-500/15 flex items-center justify-between transition-all">
+            <div>
+              <div class="text-xs sm:text-sm font-bold text-amber-200 font-festival">1. 夏祭花火・迎神音頭</div>
+              <div class="text-[10px] text-amber-300/70">慢速入門・放鬆手感・悠閒祭典 (BPM 104)</div>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-600/80 text-white font-bold">初級</span>
+          </button>
+          <!-- 曲目 2 -->
+          <button onclick="selectSong(1)" data-song="1" class="song-card w-full text-left p-3 rounded-xl border border-white/10 bg-neutral-900/60 hover:bg-neutral-800/80 flex items-center justify-between transition-all">
+            <div>
+              <div class="text-xs sm:text-sm font-bold text-neutral-200 font-festival">2. 千本櫻・太鼓狂想曲</div>
+              <div class="text-[10px] text-neutral-400">歡快進階・節奏連段・櫻之旋律 (BPM 126)</div>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-amber-600/80 text-white font-bold">進階</span>
+          </button>
+          <!-- 曲目 3 -->
+          <button onclick="selectSong(2)" data-song="2" class="song-card w-full text-left p-3 rounded-xl border border-white/10 bg-neutral-900/60 hover:bg-neutral-800/80 flex items-center justify-between transition-all">
+            <div>
+              <div class="text-xs sm:text-sm font-bold text-neutral-200 font-festival">3. 雷神祭・極限大狂瀾</div>
+              <div class="text-[10px] text-neutral-400">熱血特訓・雙手大連打・高手專屬 (BPM 146)</div>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-red-600/80 text-white font-bold">特訓</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 開始演奏按鈕與回大廳 -->
+      <div class="space-y-2.5">
+        <button id="btnStartGame" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-red-600 via-amber-500 to-red-600 hover:brightness-110 active:scale-98 text-neutral-950 font-black text-lg tracking-widest font-festival shadow-xl shadow-red-700/40 border border-amber-300 transition-all flex items-center justify-center gap-2">
+          <span>🥁</span>
+          <span>進入祭典開始演奏！</span>
+          <span>🥁</span>
+        </button>
+        <a href="../index.html" class="inline-flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-black/40 hover:bg-black/70 border border-amber-500/30 text-amber-300/80 hover:text-amber-200 text-xs font-bold font-festival transition-all">
+          <span>🏠</span> 返回遊戲大廳首頁
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ==================== 2. 暫停畫面 Modal ==================== -->
+  <div id="pauseModal" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div class="w-full max-w-sm bg-gradient-to-b from-[#3d0910] to-[#1a0205] border-2 border-amber-500/50 rounded-3xl p-6 text-center text-white shadow-2xl">
+      <div class="text-3xl mb-2">🍵</div>
+      <h2 class="text-xl font-black text-amber-300 mb-1 font-festival">祭典小憩中</h2>
+      <p class="text-xs text-neutral-400 mb-6">喝口茶，調整一下呼吸吧！</p>
+
+      <div class="space-y-3">
+        <button id="btnResume" class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-neutral-950 font-black font-festival tracking-wider transition-all">
+          繼續演奏
+        </button>
+        <button id="btnRestart" class="w-full py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-neutral-200 text-sm font-bold border border-neutral-700 transition-all">
+          重新開始本曲
+        </button>
+        <button id="btnQuitToMenu" class="w-full py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 active:scale-95 text-neutral-400 text-xs font-bold transition-all">
+          返回選曲目錄
+        </button>
+        <a href="../index.html" class="block w-full py-2.5 rounded-xl bg-red-950/70 hover:bg-red-900/80 text-amber-200 text-xs font-bold border border-red-500/40 transition-all text-center font-festival">
+          🏠 退出至遊戲大廳
+        </a>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ==================== 3. 結算畫面 Modal ==================== -->
+  <div id="resultModal" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+    <div class="relative w-full max-w-md bg-gradient-to-b from-[#4a0812] via-[#2c040a] to-[#150104] border-2 border-amber-400 rounded-3xl p-6 sm:p-7 shadow-2xl shadow-red-950 text-center text-white">
+      
+      <!-- 頂部印章標籤 -->
+      <div class="text-xs font-black tracking-widest text-amber-400 font-festival mb-1">
+        🎉 演奏圓滿結算 🎉
+      </div>
+      <h2 id="resultSongTitle" class="text-lg font-black text-amber-200 font-festival mb-4">
+        夏祭花火・迎神音頭
+      </h2>
+
+      <!-- 評價大印章 (SSS / SS / S / A / B) -->
+      <div class="relative my-3 flex justify-center items-center">
+        <div id="rankStamp" class="w-24 h-24 rounded-full border-4 border-amber-400 bg-red-950/80 flex flex-col items-center justify-center shadow-lg shadow-amber-500/30 transform rotate-[-6deg] animate-pulse">
+          <span id="rankLetter" class="text-4xl font-black text-amber-300 font-festival">S</span>
+          <span id="rankDescription" class="text-[10px] font-bold text-amber-200">太鼓達人</span>
+        </div>
+      </div>
+
+      <!-- 成績數據統計表格 -->
+      <div class="bg-black/50 border border-amber-500/30 rounded-2xl p-4 my-4 space-y-2.5 text-left text-xs sm:text-sm">
+        <div class="flex justify-between items-center border-b border-white/10 pb-2">
+          <span class="text-neutral-300 font-bold">最終總得點</span>
+          <span id="resultFinalScore" class="font-mono text-xl font-black text-amber-300">0000000</span>
+        </div>
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-amber-300 font-bold">最大連段數 (Max Combo)</span>
+          <span id="resultMaxCombo" class="font-mono font-bold text-amber-200">0 次</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 pt-1 text-center">
+          <div class="bg-amber-950/40 border border-amber-500/30 rounded-lg p-1.5">
+            <div class="text-[10px] text-amber-300 font-bold">良 (Perfect)</div>
+            <div id="resultCountPerfect" class="font-mono font-black text-base text-amber-200">0</div>
+          </div>
+          <div class="bg-blue-950/40 border border-blue-500/30 rounded-lg p-1.5">
+            <div class="text-[10px] text-sky-300 font-bold">可 (Good)</div>
+            <div id="resultCountGood" class="font-mono font-black text-base text-sky-200">0</div>
+          </div>
+          <div class="bg-neutral-900/60 border border-neutral-700 rounded-lg p-1.5">
+            <div class="text-[10px] text-neutral-400 font-bold">Miss (失誤)</div>
+            <div id="resultCountMiss" class="font-mono font-black text-base text-neutral-400">0</div>
+          </div>
+        </div>
+        <div class="flex justify-between items-center pt-1 text-[11px] text-neutral-400">
+          <span>判定準確率</span>
+          <span id="resultAccuracy" class="font-mono font-bold text-neutral-200">0%</span>
+        </div>
+      </div>
+
+      <!-- 操作按鈕 -->
+      <div class="space-y-2.5">
+        <div class="grid grid-cols-2 gap-3">
+          <button id="btnPlayAgain" class="py-3 rounded-xl bg-gradient-to-r from-red-600 to-amber-500 hover:brightness-110 active:scale-95 text-neutral-950 font-black font-festival tracking-wider shadow-lg shadow-red-700/30 border border-amber-300 transition-all text-sm">
+            再玩一次
+          </button>
+          <button id="btnChangeSong" class="py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-neutral-200 font-bold border border-neutral-600 transition-all text-sm">
+            更換曲目
+          </button>
+        </div>
+        <a href="../index.html" class="block w-full py-2.5 rounded-xl bg-black/60 hover:bg-black/80 text-amber-300 text-xs font-bold border border-amber-500/40 transition-all font-festival">
+          🏠 返回遊戲大廳首頁
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ==================== JavaScript 遊戲核心代碼 ==================== -->
+  <script>
+    /**
+     * 太鼓咚咚鏘：節奏大師特訓班
+     * 核心架構：
+     * 1. Web Audio API 合成祭典樂音與真實太鼓音效 (零延遲、免外部檔案)
+     * 2. 音軌 Canvas 滿版自適應與左右分割觸控 (手機免虛擬按鈕)
+     * 3. 友善平滑自適應速度曲線 (Combo 加速、Miss 溫和減速)
+     */
+
+    // --- 音效與合成器 (Web Audio API) ---
+    class AudioManager {
+      constructor() {
+        this.ctx = null;
+        this.isMuted = false;
+        this.bgmGain = null;
+        this.sfxGain = null;
+        this.currentBgmSequence = null;
+        this.bgmPlaying = false;
+        this.scheduledEvents = [];
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+          this.bgmGain = this.ctx.createGain();
+          this.sfxGain = this.ctx.createGain();
+          this.bgmGain.gain.value = 0.55;
+          this.sfxGain.gain.value = 0.85;
+          this.bgmGain.connect(this.ctx.destination);
+          this.sfxGain.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      toggleMute() {
+        this.isMuted = !this.isMuted;
+        if (this.bgmGain && this.sfxGain) {
+          const now = this.ctx.currentTime;
+          this.bgmGain.gain.cancelScheduledValues(now);
+          this.sfxGain.gain.cancelScheduledValues(now);
+          this.bgmGain.gain.setValueAtTime(this.isMuted ? 0 : 0.55, now);
+          this.sfxGain.gain.setValueAtTime(this.isMuted ? 0 : 0.85, now);
+        }
+        return this.isMuted;
+      }
+
+      // 敲擊音效：咚 (Don - 沉穩太鼓鼓心打擊音)
+      playDon(isBig = false) {
+        if (!this.ctx || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        // 1. 低頻震盪器 (太鼓共鳴皮面：80Hz -> 38Hz 快速滑音)
+        const osc = this.ctx.createOscillator();
+        const oscGain = this.ctx.createGain();
+        const baseFreq = isBig ? 130 : 160;
+        const endFreq = isBig ? 32 : 42;
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(baseFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.16);
+
+        const volume = isBig ? 1.0 : 0.75;
+        oscGain.gain.setValueAtTime(volume, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, now + (isBig ? 0.35 : 0.22));
+
+        osc.connect(oscGain);
+        oscGain.connect(this.sfxGain);
+
+        osc.start(now);
+        osc.stop(now + (isBig ? 0.36 : 0.23));
+
+        // 2. 鼓棒皮面擊打短促噪音 (Click slap)
+        const bufferSize = this.ctx.sampleRate * 0.02;
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+        const whiteNoise = this.ctx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+        
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(800, now);
+
+        const noiseGain = this.ctx.createGain();
+        noiseGain.gain.setValueAtTime(isBig ? 0.45 : 0.3, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
+
+        whiteNoise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(this.sfxGain);
+
+        whiteNoise.start(now);
+        whiteNoise.stop(now + 0.03);
+      }
+
+      // 敲擊音效：鏘 (Ka - 清脆木緣/金屬鐵圈清音)
+      playKa(isBig = false) {
+        if (!this.ctx || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        // 雙頻木質共鳴 (850Hz + 1620Hz)
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc1.type = 'triangle';
+        osc2.type = 'square';
+
+        osc1.frequency.setValueAtTime(isBig ? 720 : 880, now);
+        osc2.frequency.setValueAtTime(isBig ? 1350 : 1680, now);
+
+        const volume = isBig ? 0.6 : 0.45;
+        gain.gain.setValueAtTime(volume, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.sfxGain);
+
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 0.09);
+        osc2.stop(now + 0.09);
+      }
+
+      // 判定反饋音效 (良 / 可 / Miss)
+      playJudgeSound(type) {
+        if (!this.ctx || this.isMuted) return;
+        const now = this.ctx.currentTime;
+
+        if (type === 'perfect') {
+          // 清脆仙女星光琴音 (二重和弦琶音)
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1046.5, now); // C6
+          osc.frequency.setValueAtTime(1318.5, now + 0.05); // E6
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+          osc.connect(gain);
+          gain.connect(this.sfxGain);
+          osc.start(now);
+          osc.stop(now + 0.26);
+        } else if (type === 'miss') {
+          // 低沉落空暗音
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(110, now);
+          osc.frequency.exponentialRampToValueAtTime(55, now + 0.15);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+          osc.connect(gain);
+          gain.connect(this.sfxGain);
+          osc.start(now);
+          osc.stop(now + 0.17);
+        }
+      }
+
+      // 播放祭典三味線/篠笛音符 (BGM 合成)
+      playInstrumentNote(time, freq, duration, type = 'pluck') {
+        if (!this.ctx || this.isMuted) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        if (type === 'pluck') {
+          // 三味線 (Shamisen)：拔弦質感鋸齒波 + 帶衰減濾波
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, time);
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(2400, time);
+          filter.frequency.exponentialRampToValueAtTime(300, time + duration);
+
+          gain.gain.setValueAtTime(0.25, time);
+          gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+          osc.connect(filter);
+          filter.connect(gain);
+        } else if (type === 'flute') {
+          // 篠笛 (Shinobue)：悠揚正弦波 + 柔和顫音
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, time);
+
+          gain.gain.setValueAtTime(0.001, time);
+          gain.gain.linearRampToValueAtTime(0.18, time + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+          osc.connect(gain);
+        } else {
+          // 伴奏低音太鼓 (Backing Beat)
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(110, time);
+          osc.frequency.exponentialRampToValueAtTime(40, time + duration);
+          gain.gain.setValueAtTime(0.3, time);
+          gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+          osc.connect(gain);
+        }
+
+        gain.connect(this.bgmGain);
+        osc.start(time);
+        osc.stop(time + duration + 0.05);
+      }
+
+      // 排程整首祭典歌曲 BGM 循環
+      scheduleBGM(songData, startTime) {
+        this.clearScheduledEvents();
+        const { bpm, melodyPattern, bassPattern, totalDuration } = songData;
+        const beatSec = 60 / bpm;
+        const now = startTime;
+
+        let t = 0;
+        let noteIndex = 0;
+        while (t < totalDuration) {
+          // 1. 旋律軌道 (和風五聲音階)
+          const noteInfo = melodyPattern[noteIndex % melodyPattern.length];
+          if (noteInfo.freq > 0) {
+            this.playInstrumentNote(now + t, noteInfo.freq, noteInfo.beats * beatSec * 0.9, noteInfo.type);
+          }
+
+          // 2. 伴奏節拍 (鼓點底音)
+          const bassInfo = bassPattern[noteIndex % bassPattern.length];
+          if (bassInfo && bassInfo.hit) {
+            this.playInstrumentNote(now + t, 90, 0.15, 'drum');
+          }
+
+          t += noteInfo.beats * beatSec;
+          noteIndex++;
+        }
+      }
+
+      clearScheduledEvents() {
+        // 音訊重設
+      }
+    }
+
+    const audioMgr = new AudioManager();
+
+    // --- 樂曲曲庫與譜面數據庫 ---
+    // 日本五聲音階 (D Yo scale): D4=293.66, E4=329.63, G4=392.00, A4=440.00, B4=493.88, D5=587.33, E5=659.25
+    const SONG_DATABASE = [
+      {
+        id: 0,
+        title: '夏祭花火・迎神音頭',
+        difficulty: '初級 (入門)',
+        bpm: 104,
+        totalDuration: 42, // 秒
+        description: '慢速入門・放鬆手感・悠閒祭典',
+        melodyPattern: [
+          { freq: 293.66, beats: 1, type: 'pluck' }, // D4
+          { freq: 392.00, beats: 1, type: 'pluck' }, // G4
+          { freq: 440.00, beats: 1, type: 'pluck' }, // A4
+          { freq: 493.88, beats: 1, type: 'pluck' }, // B4
+          { freq: 587.33, beats: 2, type: 'flute' }, // D5
+          { freq: 493.88, beats: 1, type: 'flute' }, // B4
+          { freq: 440.00, beats: 1, type: 'pluck' }, // A4
+          { freq: 392.00, beats: 2, type: 'pluck' }, // G4
+          { freq: 293.66, beats: 2, type: 'flute' }  // D4
+        ],
+        bassPattern: [
+          { hit: true }, { hit: false }, { hit: true }, { hit: false },
+          { hit: true }, { hit: true }, { hit: true }, { hit: false },
+          { hit: true }
+        ],
+        // 自動生成平緩寬鬆音符譜面
+        generateNotes: function() {
+          const beatSec = 60 / this.bpm;
+          const notes = [];
+          // 開局前 3.0 秒空拍準備，讓玩家有充足心理準備
+          let time = 3.2;
+          const patterns = [
+            'don', 'don', 'ka', 'don',
+            'ka', 'ka', 'don', 'big_don',
+            'don', 'ka', 'don', 'ka',
+            'roll', 'don', 'ka', 'big_ka'
+          ];
+          let pIdx = 0;
+          while (time < this.totalDuration - 2.5) {
+            const type = patterns[pIdx % patterns.length];
+            notes.push({
+              time: time,
+              type: type,
+              hit: false,
+              missed: false,
+              rollHits: 0
+            });
+            // 初級間隔：1.0 ~ 1.5 拍，節奏溫和
+            const spacing = (type === 'roll') ? 2.5 : (pIdx % 3 === 0 ? 1.5 : 1.0);
+            time += spacing * beatSec;
+            pIdx++;
+          }
+          return notes;
+        }
+      },
+      {
+        id: 1,
+        title: '千本櫻・太鼓狂想曲',
+        difficulty: '進階 (歡樂)',
+        bpm: 126,
+        totalDuration: 48,
+        description: '歡快進階・節奏連段・櫻之旋律',
+        melodyPattern: [
+          { freq: 440.00, beats: 0.5, type: 'pluck' },
+          { freq: 493.88, beats: 0.5, type: 'pluck' },
+          { freq: 587.33, beats: 1.0, type: 'flute' },
+          { freq: 659.25, beats: 0.5, type: 'flute' },
+          { freq: 587.33, beats: 0.5, type: 'pluck' },
+          { freq: 493.88, beats: 1.0, type: 'pluck' },
+          { freq: 440.00, beats: 1.0, type: 'pluck' },
+          { freq: 392.00, beats: 1.0, type: 'flute' },
+          { freq: 440.00, beats: 2.0, type: 'flute' }
+        ],
+        bassPattern: [
+          { hit: true }, { hit: false }, { hit: true }, { hit: false },
+          { hit: true }, { hit: true }, { hit: false }, { hit: true },
+          { hit: true }
+        ],
+        generateNotes: function() {
+          const beatSec = 60 / this.bpm;
+          const notes = [];
+          let time = 3.0;
+          const patterns = [
+            'don', 'ka', 'don', 'don',
+            'ka', 'don', 'ka', 'ka',
+            'big_don', 'ka', 'don', 'ka',
+            'don', 'don', 'ka', 'big_ka',
+            'roll', 'don', 'ka', 'don'
+          ];
+          let pIdx = 0;
+          while (time < this.totalDuration - 2) {
+            const type = patterns[pIdx % patterns.length];
+            notes.push({
+              time: time,
+              type: type,
+              hit: false,
+              missed: false,
+              rollHits: 0
+            });
+            const spacing = (type === 'roll') ? 2.0 : (pIdx % 4 === 0 ? 1.0 : 0.75);
+            time += spacing * beatSec;
+            pIdx++;
+          }
+          return notes;
+        }
+      },
+      {
+        id: 2,
+        title: '雷神祭・極限大狂瀾',
+        difficulty: '特訓 (大師)',
+        bpm: 146,
+        totalDuration: 52,
+        description: '熱血特訓・雙手大連打・高手專屬',
+        melodyPattern: [
+          { freq: 293.66, beats: 0.5, type: 'flute' },
+          { freq: 329.63, beats: 0.5, type: 'flute' },
+          { freq: 392.00, beats: 0.5, type: 'flute' },
+          { freq: 440.00, beats: 0.5, type: 'pluck' },
+          { freq: 587.33, beats: 1.0, type: 'pluck' },
+          { freq: 659.25, beats: 1.0, type: 'flute' },
+          { freq: 587.33, beats: 0.5, type: 'pluck' },
+          { freq: 440.00, beats: 0.5, type: 'pluck' },
+          { freq: 493.88, beats: 1.0, type: 'flute' }
+        ],
+        bassPattern: [
+          { hit: true }, { hit: true }, { hit: false }, { hit: true },
+          { hit: true }, { hit: false }, { hit: true }, { hit: true },
+          { hit: true }
+        ],
+        generateNotes: function() {
+          const beatSec = 60 / this.bpm;
+          const notes = [];
+          let time = 2.8;
+          const patterns = [
+            'don', 'don', 'ka', 'don', 'ka', 'ka', 'big_don',
+            'don', 'ka', 'don', 'big_ka', 'don', 'don', 'ka',
+            'roll', 'don', 'don', 'ka', 'ka', 'big_don'
+          ];
+          let pIdx = 0;
+          while (time < this.totalDuration - 2) {
+            const type = patterns[pIdx % patterns.length];
+            notes.push({
+              time: time,
+              type: type,
+              hit: false,
+              missed: false,
+              rollHits: 0
+            });
+            const spacing = (type === 'roll') ? 2.2 : (pIdx % 5 === 0 ? 0.75 : 0.5);
+            time += spacing * beatSec;
+            pIdx++;
+          }
+          return notes;
+        }
+      }
+    ];
+
+    // --- 櫻花瓣背景特效渲染器 ---
+    class PetalBackground {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.petals = [];
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.initPetals(35);
+      }
+
+      resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+      }
+
+      initPetals(count) {
+        this.petals = [];
+        for (let i = 0; i < count; i++) {
+          this.petals.push({
+            x: Math.random() * this.canvas.width,
+            y: Math.random() * this.canvas.height,
+            size: Math.random() * 9 + 6,
+            speedX: Math.random() * 1.5 + 0.5,
+            speedY: Math.random() * 1.8 + 0.8,
+            angle: Math.random() * 360,
+            spin: (Math.random() - 0.5) * 2,
+            opacity: Math.random() * 0.5 + 0.3,
+            color: Math.random() > 0.4 ? '#ffd152' : '#ff758c'
+          });
+        }
+      }
+
+      updateAndDraw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        for (let p of this.petals) {
+          p.x += p.speedX;
+          p.y += p.speedY;
+          p.angle += p.spin;
+
+          if (p.y > this.canvas.height + 20) {
+            p.y = -20;
+            p.x = Math.random() * this.canvas.width;
+          }
+          if (p.x > this.canvas.width + 20) {
+            p.x = -20;
+          }
+
+          this.ctx.save();
+          this.ctx.translate(p.x, p.y);
+          this.ctx.rotate((p.angle * Math.PI) / 180);
+          this.ctx.globalAlpha = p.opacity;
+          this.ctx.fillStyle = p.color;
+
+          // 繪製櫻花花瓣橢圓水滴形狀
+          this.ctx.beginPath();
+          this.ctx.moveTo(0, 0);
+          this.ctx.bezierCurveTo(p.size / 2, -p.size / 2, p.size, 0, 0, p.size * 1.5);
+          this.ctx.bezierCurveTo(-p.size, 0, -p.size / 2, -p.size / 2, 0, 0);
+          this.ctx.fill();
+          this.ctx.restore();
+        }
+      }
+    }
+
+    // --- 遊戲引擎核心 (GameEngine) ---
+    class TaikoGame {
+      constructor() {
+        this.canvas = document.getElementById('trackCanvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.selectedSongIndex = 0;
+        this.currentSong = SONG_DATABASE[0];
+        this.notes = [];
+        this.gameState = 'menu'; // 'menu', 'playing', 'paused', 'result'
+        
+        // 計時與進度
+        this.songStartTime = 0;
+        this.songElapsedTime = 0;
+        this.pauseStartTime = 0;
+        
+        // 核心計分與判定統計
+        this.score = 0;
+        this.combo = 0;
+        this.maxCombo = 0;
+        this.soulGauge = 0; // 0 ~ 100
+        this.countPerfect = 0;
+        this.countGood = 0;
+        this.countMiss = 0;
+
+        // 判定時間範圍 (毫秒) - 寬鬆友善設定
+        this.windowPerfect = 0.090; // ±90ms: 良！
+        this.windowGood = 0.185;    // ±185ms: 可！(非常寬鬆)
+
+        // 友善速度曲線控制 (動態自適應)
+        this.baseTravelTime = 2.4; // 基礎音符橫跨時間 (秒)，開局極慢極寬鬆
+        this.speedFactor = 1.0;    // 當前平滑速度乘數
+        this.targetSpeedFactor = 1.0;
+
+        // 視覺位置與動畫
+        this.targetX = 160; // 判定圈太鼓中心 X 座標
+        this.trackCenterY = 0;
+        this.trackHeight = 180;
+        this.drumScale = 1.0;
+        this.drumGlowType = null; // 'don', 'ka'
+        this.drumGlowTime = 0;
+
+        // 命中浮動粒子與光效
+        this.hitParticles = [];
+
+        this.init();
+      }
+
+      init() {
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.bindEvents();
+      }
+
+      resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.trackCenterY = this.canvas.height * 0.48;
+        // 判定太鼓隨螢幕比例靈活置放於左側 15% ~ 22% 區間
+        this.targetX = Math.max(110, Math.min(220, this.canvas.width * 0.18));
+        this.trackHeight = Math.min(220, Math.max(150, this.canvas.height * 0.28));
+      }
+
+      bindEvents() {
+        // 左右全螢幕隱形觸控綁定 (使用 Pointerdown 支援多點觸控與零延遲敲擊)
+        const touchLeft = document.getElementById('touchLeft');
+        const touchRight = document.getElementById('touchRight');
+
+        const handleLeftHit = (e) => {
+          if (this.gameState !== 'playing') return;
+          e.preventDefault();
+          this.triggerInput('don', e.clientX, e.clientY);
+          this.showTapRipple(e.clientX, e.clientY, '#ff2a4a');
+          touchLeft.classList.add('active-left');
+          setTimeout(() => touchLeft.classList.remove('active-left'), 120);
+        };
+
+        const handleRightHit = (e) => {
+          if (this.gameState !== 'playing') return;
+          e.preventDefault();
+          this.triggerInput('ka', e.clientX, e.clientY);
+          this.showTapRipple(e.clientX, e.clientY, '#00b4d8');
+          touchRight.classList.add('active-right');
+          setTimeout(() => touchRight.classList.remove('active-right'), 120);
+        };
+
+        touchLeft.addEventListener('pointerdown', handleLeftHit);
+        touchRight.addEventListener('pointerdown', handleRightHit);
+
+        // 電腦鍵盤按鍵支援：F/J (咚)、D/K (鏘)、空白鍵 (暫停)
+        window.addEventListener('keydown', (e) => {
+          if (e.repeat) return; // 避免長按重送
+          const key = e.key.toLowerCase();
+
+          if (this.gameState === 'playing') {
+            if (key === 'f' || key === 'j') {
+              e.preventDefault();
+              this.triggerInput('don');
+              touchLeft.classList.add('active-left');
+              setTimeout(() => touchLeft.classList.remove('active-left'), 120);
+            } else if (key === 'd' || key === 'k') {
+              e.preventDefault();
+              this.triggerInput('ka');
+              touchRight.classList.add('active-right');
+              setTimeout(() => touchRight.classList.remove('active-right'), 120);
+            } else if (key === ' ') {
+              e.preventDefault();
+              this.togglePause();
+            }
+          } else if (this.gameState === 'paused' && key === ' ') {
+            e.preventDefault();
+            this.togglePause();
+          }
+        });
+
+        // 頂部 HUD 按鈕
+        document.getElementById('btnMute').addEventListener('click', (e) => {
+          e.stopPropagation();
+          const muted = audioMgr.toggleMute();
+          document.getElementById('btnMute').textContent = muted ? '🔇' : '🔊';
+        });
+
+        document.getElementById('btnPause').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.togglePause();
+        });
+
+        // Modal 按鈕
+        document.getElementById('btnStartGame').addEventListener('click', () => {
+          this.startGame();
+        });
+
+        document.getElementById('btnResume').addEventListener('click', () => {
+          this.togglePause();
+        });
+
+        document.getElementById('btnRestart').addEventListener('click', () => {
+          this.restartGame();
+        });
+
+        document.getElementById('btnQuitToMenu').addEventListener('click', () => {
+          this.returnToMenu();
+        });
+
+        document.getElementById('btnPlayAgain').addEventListener('click', () => {
+          this.restartGame();
+        });
+
+        document.getElementById('btnChangeSong').addEventListener('click', () => {
+          this.returnToMenu();
+        });
+      }
+
+      // 產生點擊處波紋特效 (大面積拇指觸碰反饋)
+      showTapRipple(x, y, color) {
+        if (!x || !y) return;
+        const ripple = document.createElement('div');
+        ripple.className = 'touch-ripple';
+        ripple.style.left = `${x}px`;
+        ripple.style.top = `${y}px`;
+        ripple.style.width = '70px';
+        ripple.style.height = '70px';
+        ripple.style.backgroundColor = color;
+        ripple.style.boxShadow = `0 0 25px ${color}`;
+        document.body.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 450);
+      }
+
+      // 開始新遊戲
+      startGame() {
+        audioMgr.init();
+        this.currentSong = SONG_DATABASE[this.selectedSongIndex];
+        this.notes = this.currentSong.generateNotes();
+        
+        this.score = 0;
+        this.combo = 0;
+        this.maxCombo = 0;
+        this.soulGauge = 10; // 起始給一點友善氣魄
+        this.countPerfect = 0;
+        this.countGood = 0;
+        this.countMiss = 0;
+        this.speedFactor = 1.0;
+        this.targetSpeedFactor = 1.0;
+
+        document.getElementById('songTitleDisplay').textContent = this.currentSong.title;
+        document.getElementById('startModal').classList.add('hidden');
+        document.getElementById('pauseModal').classList.add('hidden');
+        document.getElementById('resultModal').classList.add('hidden');
+        
+        this.updateHUD();
+        this.songStartTime = performance.now() / 1000;
+        this.gameState = 'playing';
+
+        // 啟動 BGM 音訊排程
+        audioMgr.scheduleBGM(this.currentSong, audioMgr.ctx.currentTime);
+      }
+
+      restartGame() {
+        this.startGame();
+      }
+
+      returnToMenu() {
+        this.gameState = 'menu';
+        document.getElementById('pauseModal').classList.add('hidden');
+        document.getElementById('resultModal').classList.add('hidden');
+        document.getElementById('startModal').classList.remove('hidden');
+      }
+
+      togglePause() {
+        if (this.gameState === 'playing') {
+          this.gameState = 'paused';
+          this.pauseStartTime = performance.now() / 1000;
+          document.getElementById('pauseModal').classList.remove('hidden');
+        } else if (this.gameState === 'paused') {
+          const pauseDuration = (performance.now() / 1000) - this.pauseStartTime;
+          this.songStartTime += pauseDuration;
+          this.gameState = 'playing';
+          document.getElementById('pauseModal').classList.add('hidden');
+        }
+      }
+
+      // 玩家敲擊判定 (Don 咚 或 Ka 鏘)
+      triggerInput(hitType, clientX = 0, clientY = 0) {
+        if (this.gameState !== 'playing') return;
+
+        // 播放打擊聲響
+        if (hitType === 'don') {
+          audioMgr.playDon(false);
+          this.drumGlowType = 'don';
+        } else {
+          audioMgr.playKa(false);
+          this.drumGlowType = 'ka';
+        }
+        this.drumGlowTime = performance.now();
+        this.drumScale = 1.18; // 太鼓彈跳震波
+
+        // 取得當前音樂播放時間 (秒)
+        const currentTime = (performance.now() / 1000) - this.songStartTime;
+
+        // 尋找判定線附近的有效音符 (以最靠近判定線且未擊中的音符為準)
+        let closestNote = null;
+        let minDiff = Infinity;
+
+        for (let note of this.notes) {
+          if (note.hit || note.missed) continue;
+          const diff = Math.abs(note.time - currentTime);
+          if (diff <= this.windowGood && diff < minDiff) {
+            minDiff = diff;
+            closestNote = note;
+          }
+        }
+
+        if (closestNote) {
+          this.evaluateHit(closestNote, hitType, minDiff);
+        } else {
+          // 檢查是否有持續連打音符 (Roll)
+          const activeRoll = this.notes.find(n => n.type === 'roll' && !n.missed && Math.abs(n.time - currentTime) < 0.65);
+          if (activeRoll) {
+            activeRoll.rollHits = (activeRoll.rollHits || 0) + 1;
+            this.score += 80;
+            this.combo++;
+            if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+            this.spawnJudgementEffect('連打！', '#ffd152', '+80');
+            this.updateHUD();
+          }
+        }
+      }
+
+      // 判定精準度與回饋
+      evaluateHit(note, hitType, diff) {
+        const isDonMatch = (note.type === 'don' || note.type === 'big_don') && hitType === 'don';
+        const isKaMatch = (note.type === 'ka' || note.type === 'big_ka') && hitType === 'ka';
+
+        if (isDonMatch || isKaMatch) {
+          note.hit = true;
+          const isBig = note.type.startsWith('big_');
+
+          if (diff <= this.windowPerfect) {
+            // === 良 (Perfect) ===
+            const basePts = isBig ? 600 : 300;
+            this.score += basePts;
+            this.combo++;
+            this.countPerfect++;
+            this.soulGauge = Math.min(100, this.soulGauge + 2.5);
+            this.spawnJudgementEffect('良！', '#ffd700', `+${basePts}`);
+            this.spawnHitParticles(this.targetX, this.trackCenterY, isBig ? '#ffe066' : (hitType === 'don' ? '#ff3366' : '#33ccff'), 18);
+            audioMgr.playJudgeSound('perfect');
+          } else {
+            // === 可 (Good) ===
+            const basePts = isBig ? 240 : 120;
+            this.score += basePts;
+            this.combo++;
+            this.countGood++;
+            this.soulGauge = Math.min(100, this.soulGauge + 1.2);
+            this.spawnJudgementEffect('可！', '#00d2d3', `+${basePts}`);
+            this.spawnHitParticles(this.targetX, this.trackCenterY, '#00d2d3', 10);
+            audioMgr.playJudgeSound('good');
+          }
+
+          if (this.combo > this.maxCombo) {
+            this.maxCombo = this.combo;
+          }
+
+          // ★ 友善速度曲線：Combo 越高，平滑漸進加速 (最大 +45%)
+          this.targetSpeedFactor = 1.0 + Math.min(this.combo * 0.012, 0.45);
+
+        } else {
+          // 顏色打錯：計為 Miss
+          note.missed = true;
+          this.handleMiss();
+        }
+
+        this.updateHUD();
+      }
+
+      // 漏打或打錯的失誤處理
+      handleMiss() {
+        this.combo = 0;
+        this.countMiss++;
+        this.soulGauge = Math.max(0, this.soulGauge - 3.5);
+        this.spawnJudgementEffect('Miss！', '#a29bfe', '失誤');
+        audioMgr.playJudgeSound('miss');
+
+        // ★ 友善速度曲線：若 Miss，速度貼心平滑回落，讓玩家喘口氣！
+        this.targetSpeedFactor = Math.max(1.0, this.targetSpeedFactor - 0.15);
+
+        this.updateHUD();
+      }
+
+      // 產生良/可/Miss 打擊文字彈出效果
+      spawnJudgementEffect(text, color, subText = '') {
+        const container = document.getElementById('judgeFloatContainer');
+        const popEl = document.createElement('div');
+        popEl.className = 'absolute judge-text-anim flex flex-col items-center justify-center';
+        popEl.style.left = `${this.targetX}px`;
+        popEl.style.top = `${this.trackCenterY}px`;
+
+        popEl.innerHTML = `
+          <div class="text-3xl sm:text-4xl font-black font-festival drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" style="color: ${color}">
+            ${text}
+          </div>
+          ${subText ? `<div class="text-xs font-mono font-bold text-white/90 drop-shadow">${subText}</div>` : ''}
+        `;
+
+        container.appendChild(popEl);
+        setTimeout(() => popEl.remove(), 600);
+      }
+
+      // 爆發櫻花金星粒子特效
+      spawnHitParticles(x, y, color, count = 12) {
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 5 + 2;
+          this.hitParticles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1.0,
+            color: color,
+            size: Math.random() * 6 + 3
+          });
+        }
+      }
+
+      // 更新 HUD 與連段狀態
+      updateHUD() {
+        // 分數
+        document.getElementById('scoreText').textContent = String(this.score).padStart(7, '0');
+
+        // 魂量表
+        const soulBar = document.getElementById('soulBar');
+        const soulText = document.getElementById('soulPercentText');
+        const soulIcon = document.getElementById('soulIcon');
+        const soulRounded = Math.round(this.soulGauge);
+        soulBar.style.width = `${soulRounded}%`;
+        soulText.textContent = `${soulRounded}%`;
+
+        if (this.soulGauge >= 80) {
+          soulBar.parentElement.classList.add('soul-fire');
+          soulIcon.textContent = '🔥';
+        } else {
+          soulBar.parentElement.classList.remove('soul-fire');
+          soulIcon.textContent = '🏮';
+        }
+
+        // Combo 連段顯示
+        const comboContainer = document.getElementById('comboContainer');
+        const comboCount = document.getElementById('comboCount');
+        const comboRankTitle = document.getElementById('comboRankTitle');
+
+        if (this.combo >= 2) {
+          comboContainer.style.opacity = '1';
+          comboCount.textContent = this.combo;
+
+          if (this.combo >= 50) {
+            comboRankTitle.textContent = '⚡ 太鼓之魂極限燃燒！';
+            comboCount.className = 'text-4xl sm:text-6xl font-black font-festival tracking-tighter text-red-400 drop-shadow-[0_0_15px_rgba(255,50,50,0.9)] animate-pulse';
+          } else if (this.combo >= 25) {
+            comboRankTitle.textContent = '✨ 鼓聲如雷貫耳！';
+            comboCount.className = 'text-4xl sm:text-6xl font-black font-festival tracking-tighter text-amber-300 drop-shadow-[0_0_12px_rgba(255,200,0,0.8)]';
+          } else if (this.combo >= 10) {
+            comboRankTitle.textContent = '🔥 祭典狂熱連擊！';
+            comboCount.className = 'text-3xl sm:text-5xl font-black font-festival tracking-tighter text-amber-200 drop-shadow-[0_0_10px_rgba(255,200,0,0.6)]';
+          } else {
+            comboRankTitle.textContent = '太鼓發動！';
+            comboCount.className = 'text-3xl sm:text-5xl font-black font-festival tracking-tighter text-amber-300';
+          }
+        } else {
+          comboContainer.style.opacity = '0';
+        }
+
+        // 動態速度徽章更新
+        const speedBadge = document.getElementById('speedBadge');
+        const currentSpeedDisplay = this.speedFactor.toFixed(1);
+        if (this.speedFactor > 1.3) {
+          speedBadge.className = 'mt-1 px-2.5 py-0.5 rounded-full bg-red-950/80 border border-red-500/50 text-[10px] text-red-300 font-bold';
+          speedBadge.textContent = `🔥 祭典狂熱加速 ${currentSpeedDisplay}x`;
+        } else if (this.speedFactor > 1.1) {
+          speedBadge.className = 'mt-1 px-2.5 py-0.5 rounded-full bg-amber-950/80 border border-amber-500/50 text-[10px] text-amber-300 font-bold';
+          speedBadge.textContent = `⚡ 節奏平滑提升 ${currentSpeedDisplay}x`;
+        } else {
+          speedBadge.className = 'mt-1 px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-[10px] text-emerald-300 font-bold';
+          speedBadge.textContent = `🍃 慢速適應中 ${currentSpeedDisplay}x`;
+        }
+      }
+
+      // 結算畫面
+      showResultScreen() {
+        this.gameState = 'result';
+
+        document.getElementById('resultSongTitle').textContent = this.currentSong.title;
+        document.getElementById('resultFinalScore').textContent = String(this.score).padStart(7, '0');
+        document.getElementById('resultMaxCombo').textContent = `${this.maxCombo} 次`;
+        document.getElementById('resultCountPerfect').textContent = this.countPerfect;
+        document.getElementById('resultCountGood').textContent = this.countGood;
+        document.getElementById('resultCountMiss').textContent = this.countMiss;
+
+        const totalNotes = this.countPerfect + this.countGood + this.countMiss;
+        const accuracy = totalNotes > 0 ? Math.round(((this.countPerfect * 1.0 + this.countGood * 0.5) / totalNotes) * 100) : 0;
+        document.getElementById('resultAccuracy').textContent = `${accuracy}%`;
+
+        // 評價星等判定
+        let rank = 'C';
+        let desc = '繼續加油！';
+        if (accuracy >= 95 && this.countMiss === 0) {
+          rank = 'SSS';
+          desc = '太鼓神樂・全接無雙';
+        } else if (accuracy >= 90) {
+          rank = 'SS';
+          desc = '節奏大師・滿堂喝采';
+        } else if (accuracy >= 80) {
+          rank = 'S';
+          desc = '鼓藝精湛・祭典之星';
+        } else if (accuracy >= 65) {
+          rank = 'A';
+          desc = '合格樂手・節奏自如';
+        } else if (accuracy >= 50) {
+          rank = 'B';
+          desc = '初試啼聲・祭典見習';
+        }
+
+        document.getElementById('rankLetter').textContent = rank;
+        document.getElementById('rankDescription').textContent = desc;
+        document.getElementById('resultModal').classList.remove('hidden');
+      }
+
+      // --- 主繪圖更新循環 (Loop) ---
+      update() {
+        if (this.gameState === 'playing') {
+          const currentTime = (performance.now() / 1000) - this.songStartTime;
+
+          // 平滑插值自適應速度
+          this.speedFactor += (this.targetSpeedFactor - this.speedFactor) * 0.04;
+
+          // 太鼓彈跳動畫回彈
+          this.drumScale += (1.0 - this.drumScale) * 0.15;
+
+          // 檢查過線未敲擊 (Miss 判定)
+          for (let note of this.notes) {
+            if (!note.hit && !note.missed && currentTime - note.time > this.windowGood) {
+              if (note.type === 'roll') {
+                note.missed = true; // 連打音符自然結束，不罰 Miss
+              } else {
+                note.missed = true;
+                this.handleMiss();
+              }
+            }
+          }
+
+          // 檢查歌曲是否結束
+          if (currentTime >= this.currentSong.totalDuration) {
+            this.showResultScreen();
+          }
+        }
+
+        // 粒子更新
+        for (let i = this.hitParticles.length - 1; i >= 0; i--) {
+          const p = this.hitParticles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life -= 0.035;
+          if (p.life <= 0) {
+            this.hitParticles.splice(i, 1);
+          }
+        }
+
+        this.render();
+      }
+
+      render() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        const cy = this.trackCenterY;
+        const th = this.trackHeight;
+
+        // 1. 繪製中央音樂軌道 (黑漆底 + 金色櫻花流光飾邊)
+        this.drawTrack(cy, th);
+
+        // 2. 繪製左側大太鼓判定圈 (大太鼓本體 + 敲擊光震)
+        this.drawJudgementTaiko(this.targetX, cy);
+
+        // 3. 繪製軌道上滾動的音符
+        if (this.gameState === 'playing' || this.gameState === 'paused') {
+          const currentTime = (performance.now() / 1000) - this.songStartTime;
+          this.drawNotes(currentTime, cy);
+        }
+
+        // 4. 繪製爆發粒子
+        this.drawParticles();
+      }
+
+      // 繪製音樂軌道
+      drawTrack(cy, th) {
+        const topY = cy - th / 2;
+        const bottomY = cy + th / 2;
+
+        // 軌道深色漆面漸層
+        const trackGrad = this.ctx.createLinearGradient(0, topY, 0, bottomY);
+        trackGrad.addColorStop(0, 'rgba(20, 2, 5, 0.92)');
+        trackGrad.addColorStop(0.5, 'rgba(38, 5, 10, 0.95)');
+        trackGrad.addColorStop(1, 'rgba(20, 2, 5, 0.92)');
+
+        this.ctx.fillStyle = trackGrad;
+        this.ctx.fillRect(0, topY, this.canvas.width, th);
+
+        // 軌道上下金色邊框
+        this.ctx.strokeStyle = '#c59b27';
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, topY);
+        this.ctx.lineTo(this.canvas.width, topY);
+        this.ctx.moveTo(0, bottomY);
+        this.ctx.lineTo(this.canvas.width, bottomY);
+        this.ctx.stroke();
+
+        // 軌道內側淡金輔助線
+        this.ctx.strokeStyle = 'rgba(255, 209, 82, 0.15)';
+        this.ctx.lineWidth = 1;
+        this.ctx.setLineDash([8, 8]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, cy);
+        this.ctx.lineTo(this.canvas.width, cy);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+      }
+
+      // 繪製左側判定大太鼓
+      drawJudgementTaiko(x, y) {
+        this.ctx.save();
+        this.ctx.translate(x, y);
+        this.ctx.scale(this.drumScale, this.drumScale);
+
+        const drumRadius = Math.min(52, this.trackHeight * 0.28);
+
+        // 打擊光暈擴散波
+        const glowAge = performance.now() - this.drumGlowTime;
+        if (glowAge < 200) {
+          const glowAlpha = (1 - glowAge / 200) * 0.7;
+          this.ctx.save();
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, drumRadius * (1 + glowAge * 0.003), 0, Math.PI * 2);
+          this.ctx.fillStyle = this.drumGlowType === 'don' ? `rgba(230, 0, 38, ${glowAlpha})` : `rgba(0, 168, 255, ${glowAlpha})`;
+          this.ctx.fill();
+          this.ctx.restore();
+        }
+
+        // 太鼓木桶外圈 (黑紅漆木與銅鉚釘)
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, drumRadius + 7, 0, Math.PI * 2);
+        this.ctx.fillStyle = '#2d0a0d';
+        this.ctx.fill();
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeStyle = '#d4af37';
+        this.ctx.stroke();
+
+        // 太鼓鼓面 (皮面質感)
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, drumRadius, 0, Math.PI * 2);
+        const skinGrad = this.ctx.createRadialGradient(0, 0, drumRadius * 0.2, 0, 0, drumRadius);
+        skinGrad.addColorStop(0, '#fffbf0');
+        skinGrad.addColorStop(0.85, '#f4ecd8');
+        skinGrad.addColorStop(1, '#d8c7a5');
+        this.ctx.fillStyle = skinGrad;
+        this.ctx.fill();
+
+        // 太鼓中心三巴家紋 (Mitsudomoe)
+        this.ctx.fillStyle = 'rgba(100, 30, 30, 0.22)';
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, drumRadius * 0.42, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // 判定圈核心外框
+        this.ctx.lineWidth = 2.5;
+        this.ctx.strokeStyle = 'rgba(212, 175, 55, 0.85)';
+        this.ctx.stroke();
+
+        // 鼓面中央敲擊標記小字
+        this.ctx.fillStyle = 'rgba(70, 15, 20, 0.6)';
+        this.ctx.font = '900 12px "Noto Sans TC"';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText('擊', 0, 0);
+
+        this.ctx.restore();
+      }
+
+      // 繪製軌道音符
+      drawNotes(currentTime, cy) {
+        // 音符像素移動速率 (由目前平滑自適應速度乘數決定)
+        const travelDistance = this.canvas.width - this.targetX;
+        const currentTravelSec = this.baseTravelTime / this.speedFactor;
+        const speedPxPerSec = travelDistance / currentTravelSec;
+
+        const normalRadius = Math.min(32, this.trackHeight * 0.18);
+        const bigRadius = normalRadius * 1.35;
+
+        for (let note of this.notes) {
+          if (note.hit) continue;
+
+          // 計算音符相對判定點的水平 X 座標
+          const timeDiff = note.time - currentTime;
+          const noteX = this.targetX + (timeDiff * speedPxPerSec);
+
+          // 螢幕外或已完全過線太遠的音符不繪製
+          if (noteX < -80 || noteX > this.canvas.width + 100) continue;
+
+          // 繪製音符
+          this.drawSingleNote(noteX, cy, note, normalRadius, bigRadius);
+        }
+      }
+
+      // 單顆音符繪製 (咚 / 鏘 / 大咚 / 大鏘 / 連打)
+      drawSingleNote(x, y, note, normalRadius, bigRadius) {
+        const isBig = note.type.startsWith('big_');
+        const radius = isBig ? bigRadius : normalRadius;
+        this.ctx.save();
+
+        if (note.type === 'roll') {
+          // --- 黃色連打音符長條 (Roll) ---
+          const barWidth = 140;
+          this.ctx.beginPath();
+          if (this.ctx.roundRect) {
+            this.ctx.roundRect(x - 20, y - radius * 0.8, barWidth, radius * 1.6, 20);
+          } else {
+            this.ctx.rect(x - 20, y - radius * 0.8, barWidth, radius * 1.6);
+          }
+          const rollGrad = this.ctx.createLinearGradient(x, 0, x + barWidth, 0);
+          rollGrad.addColorStop(0, '#ffd152');
+          rollGrad.addColorStop(1, '#ff9f1c');
+          this.ctx.fillStyle = rollGrad;
+          this.ctx.fill();
+          this.ctx.lineWidth = 3;
+          this.ctx.strokeStyle = '#fff';
+          this.ctx.stroke();
+
+          // 連打文字
+          this.ctx.fillStyle = '#4a2800';
+          this.ctx.font = '900 14px "Mochiy Pop One", "Noto Sans TC"';
+          this.ctx.textAlign = 'center';
+          this.ctx.textBaseline = 'middle';
+          this.ctx.fillText(`連打! (${note.rollHits || 0})`, x + barWidth / 2 - 10, y);
+
+        } else if (note.type === 'don' || note.type === 'big_don') {
+          // --- 紅色音符：咚 (Don) ---
+          // 外發光
+          this.ctx.shadowColor = 'rgba(230, 0, 38, 0.7)';
+          this.ctx.shadowBlur = 10;
+
+          // 圓形本體
+          this.ctx.beginPath();
+          this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+          const donGrad = this.ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, radius * 0.1, x, y, radius);
+          donGrad.addColorStop(0, '#ff4d6d');
+          donGrad.addColorStop(0.7, '#e60026');
+          donGrad.addColorStop(1, '#99001a');
+          this.ctx.fillStyle = donGrad;
+          this.ctx.fill();
+
+          // 純白外框 + 金邊
+          this.ctx.shadowBlur = 0;
+          this.ctx.lineWidth = isBig ? 4 : 3;
+          this.ctx.strokeStyle = '#ffffff';
+          this.ctx.stroke();
+
+          // 核心書法「咚」字
+          this.ctx.fillStyle = '#ffffff';
+          this.ctx.font = `900 ${isBig ? 20 : 16}px "Mochiy Pop One", "Noto Sans TC"`;
+          this.ctx.textAlign = 'center';
+          this.ctx.textBaseline = 'middle';
+          this.ctx.fillText(isBig ? '大咚' : '咚', x, y);
+
+        } else if (note.type === 'ka' || note.type === 'big_ka') {
+          // --- 藍色音符：鏘 (Ka) ---
+          this.ctx.shadowColor = 'rgba(0, 168, 255, 0.7)';
+          this.ctx.shadowBlur = 10;
+
+          this.ctx.beginPath();
+          this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+          const kaGrad = this.ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, radius * 0.1, x, y, radius);
+          kaGrad.addColorStop(0, '#48cae4');
+          kaGrad.addColorStop(0.7, '#0096c7');
+          kaGrad.addColorStop(1, '#023e8a');
+          this.ctx.fillStyle = kaGrad;
+          this.ctx.fill();
+
+          this.ctx.shadowBlur = 0;
+          this.ctx.lineWidth = isBig ? 4 : 3;
+          this.ctx.strokeStyle = '#ffffff';
+          this.ctx.stroke();
+
+          // 核心書法「鏘」字
+          this.ctx.fillStyle = '#ffffff';
+          this.ctx.font = `900 ${isBig ? 20 : 16}px "Mochiy Pop One", "Noto Sans TC"`;
+          this.ctx.textAlign = 'center';
+          this.ctx.textBaseline = 'middle';
+          this.ctx.fillText(isBig ? '大鏘' : '鏘', x, y);
+        }
+
+        this.ctx.restore();
+      }
+
+      // 繪製粒子
+      drawParticles() {
+        for (let p of this.hitParticles) {
+          this.ctx.save();
+          this.ctx.globalAlpha = p.life;
+          this.ctx.fillStyle = p.color;
+          this.ctx.beginPath();
+          this.ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.restore();
+        }
+      }
+    }
+
+    // --- 全域曲目選擇處理 ---
+    function selectSong(index) {
+      if (gameInstance) {
+        gameInstance.selectedSongIndex = index;
+      }
+      document.querySelectorAll('.song-card').forEach((el, i) => {
+        if (i === index) {
+          el.className = 'song-card w-full text-left p-3 rounded-xl border-2 border-amber-400 bg-amber-500/15 flex items-center justify-between transition-all';
+        } else {
+          el.className = 'song-card w-full text-left p-3 rounded-xl border border-white/10 bg-neutral-900/60 hover:bg-neutral-800/80 flex items-center justify-between transition-all';
+        }
+      });
+    }
+    window.selectSong = selectSong;
+
+    // --- 實例化與遊戲主循環 ---
+    let bgPetals = null;
+    let gameInstance = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      bgPetals = new PetalBackground('petalCanvas');
+      gameInstance = new TaikoGame();
+
+      // 60FPS 渲染循環
+      function loop() {
+        bgPetals.updateAndDraw();
+        gameInstance.update();
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    });
+  </script>
+</body>
+</html>
